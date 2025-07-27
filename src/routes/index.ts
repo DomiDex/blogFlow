@@ -1,8 +1,12 @@
 import type { Hono } from "@hono/hono";
 import { healthRoutes } from "./health.ts";
 import { webflowRoutes } from "./webflow.ts";
+import { securityRoutes } from "./security.ts";
 
 export function registerRoutes(app: Hono): void {
+  // Security routes (security.txt, CSP reporting, etc.)
+  app.route("/", securityRoutes);
+  
   // Health check routes at root level
   app.route("/", healthRoutes);
 

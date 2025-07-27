@@ -1,14 +1,14 @@
 /// <reference lib="deno.ns" />
 import type { Hono } from "@hono/hono";
 import { corsMiddleware } from "./cors.ts";
-import { securityMiddleware } from "./security.ts";
+import { securityMiddleware, requestValidation } from "./security.ts";
 import { requestLogger } from "./requestLogger.ts";
 import { errorHandler } from "./errorHandler.ts";
 import { rateLimiter, formRateLimiter, createWhitelistSkip } from "./rateLimiter.ts";
 
 /**
  * Register all middleware in the correct order
- * Order matters: error handler -> request logger -> rate limit -> cors -> security -> routes
+ * Order matters: error handler -> request logger -> security -> rate limit -> validation -> cors -> routes
  */
 export function registerMiddleware(app: Hono): void {
   // Error handler middleware (must wrap all routes)
@@ -16,6 +16,13 @@ export function registerMiddleware(app: Hono): void {
 
   // Request logger middleware (includes request ID generation)
   app.use("*", requestLogger());
+
+  // Security headers middleware (early to protect all endpoints)
+  app.use("*", securityMiddleware({
+    enableNonce: false, // Can be enabled for stricter CSP
+    enableCSP: true,
+    enableHSTS: true,
+  }));
 
   // Global rate limiting (before CORS to prevent abuse)
   app.use("*", rateLimiter({
@@ -25,12 +32,9 @@ export function registerMiddleware(app: Hono): void {
   // Specific rate limiting for form endpoints
   app.use("/api/webflow-form", formRateLimiter);
 
+  // Request validation middleware (validate before processing)
+  app.use("*", requestValidation());
+
   // CORS middleware (before routes)
   app.use("*", corsMiddleware());
-
-  // Security headers middleware
-  app.use("*", securityMiddleware());
-
-  // Additional middleware will be added in subsequent tasks:
-  // - Request validation
 }

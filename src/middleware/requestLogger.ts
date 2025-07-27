@@ -80,7 +80,10 @@ export const requestLogger = () => {
     const userAgent = c.req.header("user-agent") || "unknown";
 
     // Log incoming request
-    const requestHeaders = Object.fromEntries(c.req.raw.headers);
+    const requestHeaders: Record<string, string> = {};
+    c.req.raw.headers.forEach((value, key) => {
+      requestHeaders[key] = value;
+    });
     logger.info(`Incoming ${method} ${path}`, {
       requestId,
       method,
@@ -122,9 +125,13 @@ export const requestLogger = () => {
         requestId,
         clientIP,
         userAgent,
-        responseHeaders: sanitizeHeaders(
-          Object.fromEntries(c.res.headers)
-        ),
+        responseHeaders: (() => {
+          const headers: Record<string, string> = {};
+          c.res.headers.forEach((value, key) => {
+            headers[key] = value;
+          });
+          return sanitizeHeaders(headers);
+        })(),
       });
 
       // Log slow requests
