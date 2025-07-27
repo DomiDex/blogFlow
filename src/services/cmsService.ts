@@ -1,7 +1,7 @@
 /// <reference lib="deno.ns" />
-import { logger } from "../utils/logger.ts";
-import { createWebflowService, type WebflowService } from "./webflowService.ts";
-import { SlugService } from "./slugService.ts";
+import { logger } from "@utils/logger.ts";
+import { createWebflowService, type WebflowService } from "@services/webflowService.ts";
+import { SlugService } from "@services/slugService.ts";
 import type { WebflowCollectionItem, WebflowFieldData } from "../types/webflow.ts";
 import type { FormData } from "../types/form.ts";
 

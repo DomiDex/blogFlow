@@ -266,7 +266,7 @@ export function parseWebflowError(response: Response, responseBody?: unknown): W
   const rateLimitInfo = extractRateLimitInfo(response);
   
   // Parse response body
-  let errorData: any = {};
+  let errorData: Record<string, unknown> = {};
   if (responseBody && typeof responseBody === 'object') {
     errorData = responseBody;
   }
@@ -274,7 +274,13 @@ export function parseWebflowError(response: Response, responseBody?: unknown): W
   const context = {
     url,
     status,
-    headers: Object.fromEntries(response.headers),
+    headers: (() => {
+      const headers: Record<string, string> = {};
+      response.headers.forEach((value, key) => {
+        headers[key] = value;
+      });
+      return headers;
+    })(),
     responseBody: errorData,
   };
 
@@ -307,7 +313,7 @@ export function parseWebflowError(response: Response, responseBody?: unknown): W
 
   // Not found errors (404)
   if (status === 404) {
-    const message = errorData.message || "Resource not found";
+    const _message = errorData.message || "Resource not found";
     return new WebflowNotFoundError("Resource", undefined, context);
   }
 
@@ -322,7 +328,7 @@ export function parseWebflowError(response: Response, responseBody?: unknown): W
       // Handle validation details
       for (const [key, detail] of Object.entries(errorData.details)) {
         if (typeof detail === 'object' && detail !== null) {
-          const detailObj = detail as any;
+          const detailObj = detail as Record<string, unknown>;
           fieldErrors.push({
             field: detailObj.param || key,
             message: detailObj.description || detailObj.message || 'Invalid value',

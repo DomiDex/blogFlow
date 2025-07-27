@@ -1,3 +1,4 @@
+/// <reference lib="deno.ns" />
 export const API_VERSION = "1.0.0";
 export const SERVICE_NAME = "webflow-middleware";
 

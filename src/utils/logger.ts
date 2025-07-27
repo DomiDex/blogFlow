@@ -1,6 +1,6 @@
 /// <reference lib="deno.ns" />
 import { config } from "@config/index.ts";
-import { LOG_LEVELS } from "@config/constants.ts";
+// import { LOG_LEVELS } from "@config/constants.ts"; // Reserved for future use
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 

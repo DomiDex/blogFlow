@@ -1,13 +1,14 @@
 /// <reference lib="deno.ns" />
-import type { Context, Next } from "@hono/hono";
+import type { MiddlewareHandler } from "@hono/hono";
 import { HTTPException } from "@hono/hono/http-exception";
 import { logger } from "@utils/logger.ts";
 import { config } from "@config/index.ts";
+import type { Variables } from "@app-types";
 import {
-  BaseError,
-  ValidationError,
-  WebflowError,
-  RateLimitError,
+  BaseError as _BaseError,
+  ValidationError as _ValidationError,
+  WebflowError as _WebflowError,
+  RateLimitError as _RateLimitError,
   isBaseError,
   isValidationError,
   isRateLimitError,
@@ -24,12 +25,12 @@ interface ErrorResponse {
   timestamp: string;
 }
 
-export const errorHandler = () => {
-  return async (c: Context, next: Next) => {
+export const errorHandler = (): MiddlewareHandler<{ Variables: Variables }> => {
+  return async (c, next) => {
     try {
       await next();
     } catch (error) {
-      const requestId = c.get("requestId") as string || "unknown";
+      const requestId = c.get("requestId") || "unknown";
       const isDevelopment = config.NODE_ENV === "development";
 
       // Default error values
@@ -70,7 +71,7 @@ export const errorHandler = () => {
         }
 
         // Include context in development
-        if (isDevelopment && error.context) {
+        if (isDevelopment && error.context && details) {
           details = { ...details, context: error.context };
         }
       } else if (error instanceof HTTPException) {
@@ -161,7 +162,7 @@ export const errorHandler = () => {
       }
 
       // Return error response
-      return c.json(errorResponse, status);
+      return c.json(errorResponse, status as 400 | 401 | 403 | 404 | 429 | 500);
     }
   };
 };

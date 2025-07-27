@@ -1,93 +1,180 @@
+/// <reference lib="deno.ns" />
 import { Hono } from "@hono/hono";
-import { ValidationError, BusinessLogicError } from "@utils/errors.ts";
 import { logger } from "@utils/logger.ts";
+import type { Variables } from "@app-types";
+import { 
+  createFormValidation,
+  draftFormValidation,
+  updateFormValidation,
+  getValidatedData,
+  validateContentLength,
+  validationRateLimit
+} from "@middleware/validation.ts";
+import type { FormData, DraftFormData, UpdateFormData } from "@utils/validation.ts";
 
-export const webflowRoutes = new Hono();
+export const webflowRoutes = new Hono<{ Variables: Variables }>();
 
-// Main form submission endpoint - placeholder implementation
-webflowRoutes.post("/webflow-form", async (c) => {
-  const requestId = c.get("requestId") as string;
-  
-  // Log the incoming request for debugging
-  logger.debug("Processing form submission", {
-    requestId,
-    method: c.req.method,
-    url: c.req.url,
-  });
+// Main form submission endpoint with comprehensive validation
+webflowRoutes.post(
+  "/webflow-form",
+  validationRateLimit(),
+  createFormValidation,
+  validateContentLength({ minWords: 50, maxWords: 5000 }),
+  (c) => {
+    const requestId = c.get("requestId") as string;
+    const validatedData = getValidatedData<FormData>(c);
+    
+    logger.info("Processing validated form submission", {
+      requestId,
+      authorName: validatedData.authorName,
+      articleTitle: validatedData.articleTitle.substring(0, 50) + "...",
+      contentWords: extractWordCount(validatedData.articleContent),
+      publishNow: validatedData.publishNow,
+    });
 
-  // Get request body (will be validated in later tasks)
-  let body;
-  const contentType = c.req.header("content-type");
-  
-  if (!contentType || !contentType.includes("application/json")) {
-    throw new ValidationError(
-      "Content-Type must be application/json",
-      "headers.content-type",
-      contentType
-    );
+    // TODO: Next tasks will implement:
+    // - Quill Delta to HTML conversion (Task 17)
+    // - HTML sanitization (Task 18) 
+    // - Metadata generation (Task 19)
+    // - Field mapping to Webflow CMS (Task 20)
+    // - Webflow CMS item creation
+
+    // Placeholder response with validated data structure
+    return c.json({
+      success: true,
+      message: "Form submission validated successfully",
+      data: {
+        authorName: validatedData.authorName,
+        articleTitle: validatedData.articleTitle,
+        metaDescription: validatedData.metaDescription,
+        contentPreview: extractTextPreview(validatedData.articleContent, 100),
+        wordCount: extractWordCount(validatedData.articleContent),
+        publishNow: validatedData.publishNow,
+        slug: validatedData.slug,
+        categories: validatedData.categories?.length || 0,
+        tags: validatedData.tags?.length || 0,
+      },
+      processing: {
+        timestamp: new Date().toISOString(),
+        requestId,
+        validationPassed: true,
+        nextSteps: [
+          "Convert Quill Delta to HTML",
+          "Sanitize HTML content",
+          "Generate metadata (reading time, intro text)",
+          "Map fields to Webflow CMS structure",
+          "Create Webflow CMS item",
+          "Publish item (if requested)"
+        ]
+      }
+    });
   }
+);
 
-  try {
-    body = await c.req.json();
-  } catch (error) {
-    // Get the raw body text for error reporting
-    const rawBody = await c.req.raw.clone().text();
-    throw new ValidationError(
-      "Request body must be valid JSON",
-      "body",
-      rawBody,
-      { parseError: error instanceof Error ? error.message : String(error) }
-    );
+// Draft saving endpoint (more lenient validation)
+webflowRoutes.post(
+  "/webflow-form/draft",
+  validationRateLimit(),
+  draftFormValidation,
+  (c) => {
+    const requestId = c.get("requestId") as string;
+    const validatedData = getValidatedData<DraftFormData>(c);
+    
+    logger.info("Processing draft save", {
+      requestId,
+      hasTitle: !!validatedData.articleTitle,
+      hasContent: !!validatedData.articleContent,
+      hasAuthor: !!validatedData.authorName,
+    });
+
+    return c.json({
+      success: true,
+      message: "Draft saved successfully",
+      data: {
+        fieldsPresent: Object.keys(validatedData).filter(key => 
+          validatedData[key as keyof DraftFormData] !== undefined
+        ),
+        wordCount: validatedData.articleContent ? 
+          extractWordCount(validatedData.articleContent) : 0,
+      },
+      processing: {
+        timestamp: new Date().toISOString(),
+        requestId,
+        type: "draft",
+      }
+    });
   }
+);
 
-  // Basic validation example (will be enhanced with Zod in later tasks)
-  if (!body || typeof body !== "object") {
-    throw new ValidationError(
-      "Request body must be a non-empty object",
-      "body",
-      body
-    );
+// Update existing item endpoint
+webflowRoutes.put(
+  "/webflow-form/:itemId",
+  validationRateLimit(),
+  updateFormValidation,
+  validateContentLength({ minWords: 50, maxWords: 5000 }),
+  (c) => {
+    const requestId = c.get("requestId") as string;
+    const itemId = c.req.param("itemId");
+    const validatedData = getValidatedData<UpdateFormData>(c);
+    
+    logger.info("Processing form update", {
+      requestId,
+      itemId,
+      updatedFields: Object.keys(validatedData).filter(key => 
+        validatedData[key as keyof UpdateFormData] !== undefined
+      ),
+    });
+
+    return c.json({
+      success: true,
+      message: "Form update validated successfully",
+      data: {
+        itemId,
+        updatedFields: Object.keys(validatedData).length,
+        contentWords: extractWordCount(validatedData.articleContent),
+      },
+      processing: {
+        timestamp: new Date().toISOString(),
+        requestId,
+        type: "update",
+      }
+    });
   }
-
-  // Example of field-specific validation
-  if (!body.authorName || typeof body.authorName !== "string") {
-    throw new ValidationError(
-      "Author name is required and must be a string",
-      "authorName",
-      body.authorName
-    );
-  }
-
-  if (!body.articleTitle || typeof body.articleTitle !== "string") {
-    throw new ValidationError(
-      "Article title is required and must be a string",
-      "articleTitle",
-      body.articleTitle
-    );
-  }
-
-  // Example of business logic error
-  if (body.articleTitle.length < 5) {
-    throw new BusinessLogicError(
-      "Article title must be at least 5 characters long",
-      "TITLE_TOO_SHORT",
-      { providedLength: body.articleTitle.length, minimumLength: 5 }
-    );
-  }
-
-  // Placeholder response - full implementation in later tasks
-  return c.json({
-    success: true,
-    message: "Form submission received (placeholder implementation)",
-    received: body,
-    timestamp: new Date().toISOString(),
-    requestId,
-    note: "Full Webflow CMS integration pending",
-  });
-});
+);
 
 // Options endpoint for CORS preflight
 webflowRoutes.options("/webflow-form", (_c) => {
   // CORS headers are handled by middleware
   return new Response(null, { status: 204 });
 });
+
+webflowRoutes.options("/webflow-form/draft", (_c) => {
+  return new Response(null, { status: 204 });
+});
+
+webflowRoutes.options("/webflow-form/:itemId", (_c) => {
+  return new Response(null, { status: 204 });
+});
+
+// Helper functions for content processing
+function extractTextPreview(delta: { ops?: Array<{ insert?: unknown }> }, maxLength: number = 100): string {
+  if (!delta.ops) return "";
+  
+  const text = delta.ops
+    .map(op => typeof op.insert === 'string' ? op.insert : '')
+    .join('')
+    .trim();
+  
+  return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
+}
+
+function extractWordCount(delta: { ops?: Array<{ insert?: unknown }> }): number {
+  if (!delta.ops) return 0;
+  
+  const text = delta.ops
+    .map(op => typeof op.insert === 'string' ? op.insert : '')
+    .join('')
+    .trim();
+  
+  return text.split(/\s+/).filter(word => word.length > 0).length;
+}

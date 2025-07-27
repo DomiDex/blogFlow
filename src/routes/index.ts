@@ -1,9 +1,11 @@
+/// <reference lib="deno.ns" />
 import type { Hono } from "@hono/hono";
 import { healthRoutes } from "./health.ts";
 import { webflowRoutes } from "./webflow.ts";
 import { securityRoutes } from "./security.ts";
+import type { Variables } from "@app-types";
 
-export function registerRoutes(app: Hono): void {
+export function registerRoutes(app: Hono<{ Variables: Variables }>): void {
   // Security routes (security.txt, CSP reporting, etc.)
   app.route("/", securityRoutes);
   

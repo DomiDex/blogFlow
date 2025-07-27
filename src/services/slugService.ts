@@ -1,6 +1,6 @@
 /// <reference lib="deno.ns" />
-import { logger } from "../utils/logger.ts";
-import type { WebflowService } from "./webflowService.ts";
+import { logger } from "@utils/logger.ts";
+import type { WebflowService } from "@services/webflowService.ts";
 
 export interface SlugGenerationOptions {
   maxLength?: number;

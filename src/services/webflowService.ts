@@ -1,7 +1,7 @@
 /// <reference lib="deno.ns" />
-import { logger } from "../utils/logger.ts";
-import { parseWebflowError, parseNetworkError, type WebflowError } from "../utils/webflowErrors.ts";
-import { createWebflowRetryHandler, type WebflowRetryHandler } from "../utils/retry.ts";
+import { logger } from "@utils/logger.ts";
+import { parseWebflowError, parseNetworkError } from "@utils/webflowErrors.ts";
+import { createWebflowRetryHandler, type WebflowRetryHandler } from "@utils/retry.ts";
 import type { WebflowCollectionItem, WebflowCreateItemRequest, WebflowListResponse } from "../types/webflow.ts";
 
 export interface WebflowServiceConfig {
@@ -158,7 +158,7 @@ export class WebflowService {
       });
 
       // Find exact slug match
-      const exactMatch = response.items?.find(item => 
+      const exactMatch = response.items?.find((item: WebflowCollectionItem) => 
         item.fieldData.slug === slug
       );
 

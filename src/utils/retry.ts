@@ -1,12 +1,12 @@
 /// <reference lib="deno.ns" />
-import { logger } from "../utils/logger.ts";
-import { ExternalServiceError, TimeoutError } from "../utils/errors.ts";
+import { logger } from "@utils/logger.ts";
+import { ExternalServiceError, TimeoutError } from "@utils/errors.ts";
 import { 
   isWebflowError, 
   isRetryableError as isWebflowRetryableError, 
   getErrorRecoveryStrategy,
-  type WebflowError 
-} from "../utils/webflowErrors.ts";
+  type WebflowError as _WebflowError 
+} from "@utils/webflowErrors.ts";
 
 export interface RetryOptions {
   maxAttempts?: number;
@@ -14,7 +14,7 @@ export interface RetryOptions {
   maxDelay?: number;
   backoffMultiplier?: number;
   retryableStatuses?: number[];
-  retryableErrors?: Array<new (...args: any[]) => Error>;
+  retryableErrors?: Array<new (...args: unknown[]) => Error>;
   onRetry?: (error: Error, attempt: number) => void;
   timeout?: number;
 }
@@ -56,7 +56,7 @@ function calculateDelay(
 function isRetryableError(
   error: unknown,
   retryableStatuses: number[],
-  retryableErrors: Array<new (...args: any[]) => Error>
+  retryableErrors: Array<new (...args: unknown[]) => Error>
 ): boolean {
   if (!error) return false;
 
@@ -72,7 +72,7 @@ function isRetryableError(
 
   // Check if it's an HTTP error with retryable status
   if (error instanceof Error && "status" in error) {
-    const status = (error as any).status;
+    const status = (error as { status?: number }).status;
     if (typeof status === "number" && retryableStatuses.includes(status)) {
       return true;
     }
@@ -405,7 +405,7 @@ export class CircuitBreaker {
 }
 
 // Retry with circuit breaker
-export async function retryWithCircuitBreaker<T>(
+export function retryWithCircuitBreaker<T>(
   circuitBreaker: CircuitBreaker,
   fn: () => Promise<T>,
   retryOptions?: RetryOptions
@@ -547,7 +547,7 @@ export function withCircuitBreaker<TArgs extends unknown[], TReturn>(
     ...options,
   });
 
-  return async (...args: TArgs): Promise<TReturn> => {
+  return (...args: TArgs): Promise<TReturn> => {
     return circuitBreaker.execute(() => fn(...args));
   };
 }

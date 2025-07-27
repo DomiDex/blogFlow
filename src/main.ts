@@ -5,9 +5,10 @@ import { config } from "@config/index.ts";
 import { registerRoutes } from "@routes/index.ts";
 import { registerMiddleware } from "@middleware/index.ts";
 import { logger } from "@utils/logger.ts";
+import type { Variables } from "@app-types";
 
 // Create Hono app with strict typing
-const app = new Hono();
+const app = new Hono<{ Variables: Variables }>();
 
 // Register global middleware (order matters!)
 registerMiddleware(app);
@@ -44,6 +45,7 @@ console.log(`
 // Use Deno's native HTTP server
 await serve(app.fetch, {
   port,
+  hostname: "127.0.0.1", // Explicitly bind to localhost
   onListen({ port, hostname }) {
     logger.info("Server ready", {
       hostname,

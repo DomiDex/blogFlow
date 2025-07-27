@@ -1,7 +1,8 @@
 /// <reference lib="deno.ns" />
-import type { Context, Next } from "@hono/hono";
+import type { Context, MiddlewareHandler } from "@hono/hono";
 import { logger } from "@utils/logger.ts";
-import { config } from "@config/index.ts";
+import type { Variables } from "@app-types";
+// import { config } from "@config/index.ts"; // Reserved for future use
 
 // Generate unique request ID
 function generateRequestId(): string {
@@ -65,8 +66,8 @@ function sanitizeHeaders(headers: Record<string, string>): Record<string, string
   return sanitized;
 }
 
-export const requestLogger = () => {
-  return async (c: Context, next: Next) => {
+export const requestLogger = (): MiddlewareHandler<{ Variables: Variables }> => {
+  return async (c, next) => {
     const start = performance.now();
     const requestId = generateRequestId();
     

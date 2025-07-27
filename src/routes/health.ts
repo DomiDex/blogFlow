@@ -3,13 +3,14 @@ import { Hono } from "@hono/hono";
 import { config } from "@config/index.ts";
 import { logger } from "@utils/logger.ts";
 import { getRateLimitStats } from "@middleware/rateLimiter.ts";
+import type { Variables } from "@app-types";
 
-export const healthRoutes = new Hono();
+export const healthRoutes = new Hono<{ Variables: Variables }>();
 
 // Detailed health check endpoint
 healthRoutes.get("/health", (c) => {
   const memoryUsage = Deno.memoryUsage();
-  const requestId = c.get("requestId") as string | undefined;
+  const requestId = c.get("requestId");
 
   // Log health check access
   logger.debug("Health check accessed", {

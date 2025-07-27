@@ -2,6 +2,7 @@
 import { cors } from "@hono/cors";
 import { config, isDevelopment } from "@config/index.ts";
 import type { MiddlewareHandler } from "@hono/hono";
+import type { Variables } from "@app-types";
 
 /**
  * CORS configuration for Webflow form submissions
@@ -53,7 +54,7 @@ const createOriginValidator = (allowedOrigins: string[]) => {
 };
 
 // CORS middleware configuration
-export const corsMiddleware = (): MiddlewareHandler => {
+export const corsMiddleware = (): MiddlewareHandler<{ Variables: Variables }> => {
   const allowedOrigins = getAllowedOrigins();
   const validateOrigin = createOriginValidator(allowedOrigins);
 

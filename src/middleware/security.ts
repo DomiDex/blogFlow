@@ -1,7 +1,8 @@
 /// <reference lib="deno.ns" />
 import type { MiddlewareHandler, Context } from "@hono/hono";
-import { config, isDevelopment, isProduction } from "@config/index.ts";
+import { isDevelopment, isProduction } from "@config/index.ts";
 import { logger } from "@utils/logger.ts";
+import type { Variables } from "@app-types";
 
 /**
  * Security headers middleware
@@ -76,7 +77,7 @@ const getCSPDirectives = (nonce?: string): string => {
 };
 
 // Enhanced security headers configuration
-export const getSecurityHeaders = (c?: Context): Record<string, string> => {
+export const getSecurityHeaders = (_c?: Context): Record<string, string> => {
   const headers: Record<string, string> = {
     // Prevent XSS attacks
     "X-XSS-Protection": "1; mode=block",
@@ -133,7 +134,7 @@ export const getSecurityHeaders = (c?: Context): Record<string, string> => {
 };
 
 // Security middleware
-export const securityMiddleware = (options: Partial<SecurityConfig> = {}): MiddlewareHandler => {
+export const securityMiddleware = (options: Partial<SecurityConfig> = {}): MiddlewareHandler<{ Variables: Variables }> => {
   const config = { ...defaultSecurityConfig, ...options };
   
   return async (c, next) => {
@@ -204,16 +205,16 @@ export const sanitizeHeaders = (headers: Headers): Record<string, string> => {
 };
 
 // Request validation middleware
-export const requestValidation = (): MiddlewareHandler => {
+export const requestValidation = (): MiddlewareHandler<{ Variables: Variables }> => {
   return async (c, next) => {
     const method = c.req.method;
     const contentType = c.req.header("content-type");
     const contentLength = c.req.header("content-length");
-    const requestId = c.get("requestId") as string;
+    const requestId = c.get("requestId");
 
     // Validate Content-Type for POST/PUT/PATCH requests
     if (["POST", "PUT", "PATCH"].includes(method)) {
-      if (!validateContentType(contentType)) {
+      if (!validateContentType(contentType || null)) {
         logger.warn("Invalid content type", {
           requestId,
           contentType,
@@ -271,7 +272,7 @@ export const requestValidation = (): MiddlewareHandler => {
             );
           }
         }
-      } catch (error) {
+      } catch (_error) {
         // Body might not be readable, continue
       }
     }
@@ -293,10 +294,10 @@ export const validateCSRFToken = (token: string | null, sessionToken: string): b
 };
 
 // API Key validation middleware
-export const apiKeyValidation = (validKeys: Set<string>): MiddlewareHandler => {
+export const apiKeyValidation = (validKeys: Set<string>): MiddlewareHandler<{ Variables: Variables }> => {
   return async (c, next) => {
     const apiKey = c.req.header("x-api-key") || c.req.header("api-key");
-    const requestId = c.get("requestId") as string;
+    const requestId = c.get("requestId");
 
     if (!apiKey) {
       logger.warn("Missing API key", {

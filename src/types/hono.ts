@@ -7,6 +7,8 @@ export type Variables = {
   userAgent: string | undefined;
   realIp: string;
   startTime: number;
+  cspNonce?: string;
+  apiKey?: string;
 };
 
 // Export a typed Hono instance

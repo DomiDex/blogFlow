@@ -2,12 +2,13 @@
 import { Hono } from "@hono/hono";
 import { logger } from "@utils/logger.ts";
 import { securityTxtHandler } from "@middleware/security.ts";
+import type { Variables } from "@app-types";
 
-export const securityRoutes = new Hono();
+export const securityRoutes = new Hono<{ Variables: Variables }>();
 
 // CSP violation report endpoint
 securityRoutes.post("/api/csp-report", async (c) => {
-  const requestId = c.get("requestId") as string;
+  const requestId = c.get("requestId");
   
   try {
     const report = await c.req.json();
@@ -37,13 +38,13 @@ securityRoutes.post("/api/csp-report", async (c) => {
       });
     }
 
-    return c.text("", 204); // No Content
+    return c.body(null, 204); // No Content
   } catch (error) {
     logger.error("Failed to process CSP report", {
       requestId,
       error: error instanceof Error ? error : new Error(String(error)),
     });
-    return c.text("", 204); // Still return 204 to avoid retries
+    return c.body(null, 204); // Still return 204 to avoid retries
   }
 });
 
@@ -79,7 +80,7 @@ Crawl-delay: 1
 // Health check for security headers
 securityRoutes.get("/api/security-check", (c) => {
   const headers = Object.fromEntries(c.res.headers);
-  const requestId = c.get("requestId") as string;
+  const requestId = c.get("requestId");
   
   // Check for essential security headers
   const requiredHeaders = [

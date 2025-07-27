@@ -1,3 +1,4 @@
+/// <reference lib="deno.ns" />
 // Webflow API v2 Types
 export interface WebflowCollection {
   id: string;

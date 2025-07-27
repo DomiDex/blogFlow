@@ -5,12 +5,13 @@ import { securityMiddleware, requestValidation } from "./security.ts";
 import { requestLogger } from "./requestLogger.ts";
 import { errorHandler } from "./errorHandler.ts";
 import { rateLimiter, formRateLimiter, createWhitelistSkip } from "./rateLimiter.ts";
+import type { Variables } from "@app-types";
 
 /**
  * Register all middleware in the correct order
  * Order matters: error handler -> request logger -> security -> rate limit -> validation -> cors -> routes
  */
-export function registerMiddleware(app: Hono): void {
+export function registerMiddleware(app: Hono<{ Variables: Variables }>): void {
   // Error handler middleware (must wrap all routes)
   app.use("*", errorHandler());
 

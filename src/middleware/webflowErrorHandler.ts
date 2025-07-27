@@ -1,6 +1,6 @@
 /// <reference lib="deno.ns" />
 import type { Context, Next } from "@hono/hono";
-import { logger } from "../utils/logger.ts";
+import { logger } from "@utils/logger.ts";
 import { 
   WebflowError, 
   WebflowAuthError, 
@@ -12,7 +12,7 @@ import {
   isWebflowError,
   getUserFriendlyMessage,
   getErrorRecoveryStrategy
-} from "../utils/webflowErrors.ts";
+} from "@utils/webflowErrors.ts";
 
 export interface WebflowErrorResponse {
   error: string;
