@@ -1,0 +1,51 @@
+{
+  "tasks": {
+    "dev": "deno run --watch --allow-net --allow-env --allow-read src/main.ts",
+    "start": "deno run --allow-net --allow-env src/main.ts",
+    "test": "deno test --allow-net --allow-env --allow-read",
+    "deploy": "deployctl deploy --project=webflow-middleware --prod src/main.ts",
+    "check": "deno check src/**/*.ts && deno lint && deno fmt --check"
+  },
+  "imports": {
+    "@hono/hono": "jsr:@hono/hono@^4.4.0",
+    "@hono/zod-validator": "npm:@hono/zod-validator@^0.7.0",
+    "@hono/cors": "jsr:@hono/hono/cors",
+    "@hono/logger": "jsr:@hono/hono/logger",
+    "zod": "npm:zod@^3.23.0",
+    "quill-delta-to-html": "npm:quill-delta-to-html@^0.12.0",
+    "dompurify": "npm:dompurify@^3.0.0",
+    "jsdom": "npm:jsdom@^24.0.0",
+    "slugify": "npm:slugify@^1.6.6",
+    "reading-time": "npm:reading-time@^1.5.0",
+    "@std/testing/asserts": "jsr:@std/testing@^0.218.0/asserts",
+    "@std/assert": "jsr:@std/assert@^0.218.0",
+    "@std/dotenv": "jsr:@std/dotenv@^0.218.0",
+    "@std/fmt": "jsr:@std/fmt@^0.218.0",
+    "@std/http": "jsr:@std/http@^0.218.0",
+    "@/": "./src/",
+    "@config/": "./src/config/",
+    "@middleware/": "./src/middleware/",
+    "@routes/": "./src/routes/",
+    "@services/": "./src/services/",
+    "@utils/": "./src/utils/",
+    "@types/": "./src/types/"
+  },
+  "lint": {
+    "include": ["src/"],
+    "exclude": ["tests/fixtures/"],
+    "rules": {
+      "tags": ["recommended"]
+    }
+  },
+  "fmt": {
+    "include": ["src/", "tests/"],
+    "exclude": ["tests/fixtures/"],
+    "options": {
+      "useTabs": false,
+      "lineWidth": 100,
+      "indentWidth": 2,
+      "singleQuote": false,
+      "proseWrap": "preserve"
+    }
+  }
+}
