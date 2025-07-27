@@ -102,3 +102,11 @@ export const RETRY_CONFIG = {
   backoffMultiplier: 2,
   retryableStatuses: [429, 500, 502, 503, 504],
 } as const;
+
+// Logging configuration
+export const LOG_LEVELS = {
+  DEBUG: "debug",
+  INFO: "info",
+  WARN: "warn",
+  ERROR: "error",
+} as const;

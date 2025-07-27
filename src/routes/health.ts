@@ -1,12 +1,20 @@
 /// <reference lib="deno.ns" />
 import { Hono } from "@hono/hono";
 import { config } from "@config/index.ts";
+import { logger } from "@utils/logger.ts";
 
 export const healthRoutes = new Hono();
 
 // Detailed health check endpoint
 healthRoutes.get("/health", (c) => {
   const memoryUsage = Deno.memoryUsage();
+  const requestId = c.get("requestId") as string | undefined;
+
+  // Log health check access
+  logger.debug("Health check accessed", {
+    requestId,
+    userAgent: c.req.header("user-agent"),
+  });
 
   return c.json({
     status: "healthy",
