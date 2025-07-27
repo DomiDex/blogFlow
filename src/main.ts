@@ -1,3 +1,4 @@
+/// <reference lib="deno.ns" />
 import { Hono } from "@hono/hono";
 import { serve } from "@std/http/server";
 import { config } from "@config/index.ts";
@@ -21,9 +22,9 @@ console.log(`🚀 Server running on http://localhost:${port}`);
 console.log(`💚 Health check: http://localhost:${port}/health`);
 
 // Use Deno's native HTTP server
-serve(app.fetch, {
+await serve(app.fetch, {
   port,
-  onListen() {
-    console.log(`✅ Server is ready to accept connections`);
+  onListen({ port, hostname }) {
+    console.log(`✅ Server is ready to accept connections on ${hostname}:${port}`);
   },
 });

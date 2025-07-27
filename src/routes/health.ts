@@ -1,3 +1,4 @@
+/// <reference lib="deno.ns" />
 import { Hono } from "@hono/hono";
 import { config } from "@config/index.ts";
 

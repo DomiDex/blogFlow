@@ -1,53 +1,70 @@
+/// <reference lib="deno.ns" />
 import { load } from "@std/dotenv";
+import { z } from "zod";
 
-// Load environment variables
-await load({
-  export: true,
-  allowEmptyValues: true,
+// Load environment variables in development
+if (Deno.env.get("NODE_ENV") !== "production") {
+  await load({
+    export: true,
+    allowEmptyValues: true,
+  });
+}
+
+// Define configuration schema
+const configSchema = z.object({
+  // Server
+  PORT: z.coerce.number().default(8000),
+  NODE_ENV: z
+    .enum(["development", "test", "production"])
+    .default("development"),
+
+  // Webflow API
+  WEBFLOW_API_TOKEN: z.string().min(1, "WEBFLOW_API_TOKEN is required"),
+  WEBFLOW_COLLECTION_ID: z.string().min(1, "WEBFLOW_COLLECTION_ID is required"),
+  WEBFLOW_SITE_ID: z.string().min(1, "WEBFLOW_SITE_ID is required"),
+
+  // Security
+  CORS_ORIGINS: z
+    .string()
+    .default("https://*.webflow.io,https://*.webflow.com")
+    .transform((val) => val.split(",").map((origin) => origin.trim())),
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60000),
+  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(10),
+
+  // Optional
+  SENTRY_DSN: z.string().optional().default(""),
+  LOG_LEVEL: z
+    .enum(["debug", "info", "warn", "error"])
+    .default("info"),
 });
 
-export const config = {
-  // Server configuration
-  PORT: parseInt(Deno.env.get("PORT") || "8000", 10),
-  NODE_ENV: Deno.env.get("NODE_ENV") || "development",
+// Parse and validate configuration
+function loadConfig() {
+  try {
+    const env = Object.fromEntries(
+      Object.entries(Deno.env.toObject()).filter(
+        ([key]) => key in configSchema.shape,
+      ),
+    );
 
-  // Webflow API configuration
-  WEBFLOW_API_TOKEN: Deno.env.get("WEBFLOW_API_TOKEN") || "",
-  WEBFLOW_COLLECTION_ID: Deno.env.get("WEBFLOW_COLLECTION_ID") || "",
-  WEBFLOW_SITE_ID: Deno.env.get("WEBFLOW_SITE_ID") || "",
-
-  // Rate limiting
-  RATE_LIMIT_WINDOW_MS: parseInt(
-    Deno.env.get("RATE_LIMIT_WINDOW_MS") || "60000",
-    10,
-  ),
-  RATE_LIMIT_MAX_REQUESTS: parseInt(
-    Deno.env.get("RATE_LIMIT_MAX_REQUESTS") || "100",
-    10,
-  ),
-
-  // CORS
-  ALLOWED_ORIGINS: Deno.env.get("ALLOWED_ORIGINS")?.split(",") || [
-    "https://*.webflow.io",
-    "https://*.webflow.com",
-  ],
-
-  // Development helpers
-  isDevelopment: Deno.env.get("NODE_ENV") === "development",
-  isProduction: Deno.env.get("NODE_ENV") === "production",
-};
-
-// Validate required configuration in production
-if (config.isProduction) {
-  const required = [
-    "WEBFLOW_API_TOKEN",
-    "WEBFLOW_COLLECTION_ID",
-    "WEBFLOW_SITE_ID",
-  ];
-
-  for (const key of required) {
-    if (!config[key as keyof typeof config]) {
-      throw new Error(`Missing required environment variable: ${key}`);
+    return configSchema.parse(env);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      console.error("❌ Configuration validation failed:");
+      console.error(JSON.stringify(error.format(), null, 2));
+      Deno.exit(1);
     }
+    throw error;
   }
 }
+
+export const config = loadConfig();
+export type Config = typeof config;
+
+// Helper functions for easy access
+export const isDevelopment = config.NODE_ENV === "development";
+export const isProduction = config.NODE_ENV === "production";
+export const isTest = config.NODE_ENV === "test";
+
+// Backwards compatibility with existing code
+export const ALLOWED_ORIGINS = config.CORS_ORIGINS;

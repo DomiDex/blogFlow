@@ -16,12 +16,12 @@ export interface WebflowItem {
   createdOn: string;
   isArchived: boolean;
   isDraft: boolean;
-  fieldData: Record<string, any>;
+  fieldData: Record<string, unknown>;
 }
 
 export interface WebflowApiError {
   message: string;
   code: string;
   externalReference?: string;
-  details?: any[];
+  details?: unknown[];
 }
