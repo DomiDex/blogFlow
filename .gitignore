@@ -4,6 +4,7 @@
 
 # Deno
 deno.lock
+node_modules/
 
 # IDE
 .vscode/

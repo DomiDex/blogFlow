@@ -1,13 +1,13 @@
 {
   "tasks": {
-    "dev": "deno run --no-lock --watch --allow-net --allow-env --allow-read --allow-sys src/main.ts",
-    "start": "deno run --no-lock --allow-net --allow-env src/main.ts",
-    "test": "deno test --no-lock --allow-net --allow-env --allow-read",
-    "test:cors": "deno run --no-lock --allow-net scripts/test-cors.ts",
+    "dev": "deno run --watch --allow-net --allow-env --allow-read --allow-sys src/main.ts",
+    "start": "deno run --allow-net --allow-env src/main.ts",
+    "test": "deno test --allow-net --allow-env --allow-read",
+    "test:cors": "deno run --allow-net scripts/test-cors.ts",
     "deploy": "deployctl deploy --project=webflow-middleware --prod src/main.ts",
-    "check": "deno check --no-lock src/**/*.ts && deno lint --no-lock && deno fmt --check",
+    "check": "deno check src/**/*.ts && deno lint && deno fmt --check",
     "fix:lockfile": "deno run --allow-read --allow-write --allow-run scripts/fix-lockfile.ts",
-    "lint": "deno lint --no-lock"
+    "lint": "deno lint"
   },
   "imports": {
     "@hono/hono": "jsr:@hono/hono@^4.4.0",
