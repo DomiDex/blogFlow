@@ -2,6 +2,7 @@
 import { Hono } from "@hono/hono";
 import { config } from "@config/index.ts";
 import { logger } from "@utils/logger.ts";
+import { getRateLimitStats } from "@middleware/rateLimiter.ts";
 
 export const healthRoutes = new Hono();
 
@@ -28,6 +29,7 @@ healthRoutes.get("/health", (c) => {
       heapTotal: Math.round(memoryUsage.heapTotal / 1024 / 1024), // MB
       external: Math.round(memoryUsage.external / 1024 / 1024), // MB
     },
+    rateLimits: getRateLimitStats(),
   });
 });
 
