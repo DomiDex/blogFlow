@@ -45,7 +45,7 @@ console.log(`
 // Use Deno's native HTTP server
 await serve(app.fetch, {
   port,
-  hostname: "127.0.0.1", // Explicitly bind to localhost
+  hostname: "0.0.0.0", // Bind to all interfaces for WSL compatibility
   onListen({ port, hostname }) {
     logger.info("Server ready", {
       hostname,
