@@ -163,6 +163,13 @@ export function convertDeltaToHtml(
     };
 
     const converter = new QuillDeltaToHtmlConverter(processedOps, finalConverterOptions);
+    
+    logger.debug("QuillDeltaToHtmlConverter initialized", {
+      processedOpsLength: processedOps.length,
+      processedOpsFirst: processedOps[0],
+      converterType: typeof converter,
+      hasConvertMethod: typeof converter.convert === 'function',
+    });
 
     // Custom link handler
     // @ts-ignore - Type mismatch with quill-delta-to-html library
@@ -182,13 +189,126 @@ export function convertDeltaToHtml(
     // Convert to HTML
     let html = converter.convert();
     
+    logger.debug("Initial HTML conversion", {
+      htmlResult: html?.substring(0, 100),
+      htmlType: typeof html,
+      isObjectString: html === "[object Object]",
+    });
+    
     // Workaround for Deno test environment issue where convert() returns "[object Object]"
     // This appears to be a module resolution issue specific to Deno's test environment
-    // See: https://github.com/denoland/deno/issues/[pending issue number]
-    if (html === "[object Object]") {
-      // Recreate converter without custom options as a fallback
-      const basicConverter = new QuillDeltaToHtmlConverter(processedOps);
-      html = basicConverter.convert();
+    // The quill-delta-to-html library seems to have compatibility issues with Deno
+    if (html === "[object Object]" || typeof html !== 'string' || html.includes("[object Object]")) {
+      logger.warn("HTML conversion returned object, using enhanced fallback converter", {
+        originalResult: html,
+      });
+      
+      // Enhanced manual conversion with proper Delta structure handling
+      const blocks: string[] = [];
+      let currentBlock: string[] = [];
+      let listItems: string[] = [];
+      let currentListType: string | null = null;
+      
+      processedOps.forEach((op, index) => {
+        if (typeof op.insert === 'string') {
+          const lines = op.insert.split('\n');
+          
+          lines.forEach((line, lineIndex) => {
+            if (lineIndex > 0) {
+              // Process accumulated content for the previous line
+              if (currentBlock.length > 0 || line === '') {
+                const blockContent = currentBlock.join('');
+                const prevOp = index > 0 ? processedOps[index - 1] : null;
+                const blockAttributes = prevOp?.attributes || {};
+                
+                // Handle list items
+                if (blockAttributes.list) {
+                  const listType = blockAttributes.list === 'ordered' ? 'ol' : 'ul';
+                  
+                  if (currentListType && currentListType !== listType) {
+                    // Close previous list
+                    blocks.push(`<${currentListType}>${listItems.join('')}</${currentListType}>`);
+                    listItems = [];
+                  }
+                  
+                  currentListType = listType;
+                  listItems.push(`<li>${blockContent}</li>`);
+                } else {
+                  // Close any open lists
+                  if (currentListType && listItems.length > 0) {
+                    blocks.push(`<${currentListType}>${listItems.join('')}</${currentListType}>`);
+                    listItems = [];
+                    currentListType = null;
+                  }
+                  
+                  // Handle other block types
+                  if (blockAttributes.header) {
+                    blocks.push(`<h${blockAttributes.header}>${blockContent}</h${blockAttributes.header}>`);
+                  } else if (blockAttributes['code-block']) {
+                    blocks.push(`<pre><code>${blockContent}</code></pre>`);
+                  } else if (blockAttributes.blockquote) {
+                    blocks.push(`<blockquote>${blockContent}</blockquote>`);
+                  } else if (blockContent.trim()) {
+                    blocks.push(`<p>${blockContent}</p>`);
+                  }
+                }
+                
+                currentBlock = [];
+              }
+            }
+            
+            if (line) {
+              // Apply inline formatting
+              let formattedText = line;
+              
+              if (op.attributes?.bold) formattedText = `<strong>${formattedText}</strong>`;
+              if (op.attributes?.italic) formattedText = `<em>${formattedText}</em>`;
+              if (op.attributes?.underline) formattedText = `<u>${formattedText}</u>`;
+              if (op.attributes?.strike) formattedText = `<s>${formattedText}</s>`;
+              if (op.attributes?.code) formattedText = `<code>${formattedText}</code>`;
+              if (op.attributes?.link) {
+                formattedText = `<a href="${op.attributes.link}" target="_blank" rel="noopener noreferrer">${formattedText}</a>`;
+              }
+              
+              currentBlock.push(formattedText);
+            }
+          });
+        } else if (typeof op.insert === 'object') {
+          // Handle embeds
+          if (op.insert.image) {
+            const imgAttrs = op.attributes || {};
+            let imgHtml = `<img src="${op.insert.image}" alt=""`;
+            if (imgAttrs.width) imgHtml += ` width="${imgAttrs.width}"`;
+            if (imgAttrs.height) imgHtml += ` height="${imgAttrs.height}"`;
+            imgHtml += `>`;
+            currentBlock.push(imgHtml);
+          } else if (op.insert.video) {
+            const videoUrl = processVideoUrl(op.insert.video);
+            currentBlock.push(`<iframe src="${videoUrl}" frameborder="0" allowfullscreen></iframe>`);
+          }
+        }
+      });
+      
+      // Process any remaining content
+      if (currentBlock.length > 0) {
+        const blockContent = currentBlock.join('');
+        if (blockContent.trim()) {
+          blocks.push(`<p>${blockContent}</p>`);
+        }
+      }
+      
+      // Close any open lists
+      if (currentListType && listItems.length > 0) {
+        blocks.push(`<${currentListType}>${listItems.join('')}</${currentListType}>`);
+      }
+      
+      html = blocks.join('');
+      
+      logger.debug("Enhanced fallback conversion completed", {
+        blocksCount: blocks.length,
+        htmlLength: html.length,
+        htmlPreview: html.substring(0, 200),
+      });
     }
 
     // Post-process HTML

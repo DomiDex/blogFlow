@@ -68,6 +68,32 @@ export function validateFormData(options: ValidationOptions = {}) {
         } satisfies ValidationErrorResponse, 400);
       }
 
+      // Preprocess form data to fix common serialization issues
+      if (body && typeof body === 'object' && body.articleContent && body.articleContent.ops) {
+        // Convert ops from object to array if needed (happens with some JSON serialization)
+        if (!Array.isArray(body.articleContent.ops) && typeof body.articleContent.ops === 'object') {
+          const opsObj = body.articleContent.ops as Record<string, unknown>;
+          const opsArray = [];
+          
+          // Convert numeric keys to array
+          const keys = Object.keys(opsObj).sort((a, b) => parseInt(a) - parseInt(b));
+          for (const key of keys) {
+            if (!isNaN(parseInt(key))) {
+              opsArray.push(opsObj[key]);
+            }
+          }
+          
+          if (opsArray.length > 0) {
+            body.articleContent.ops = opsArray;
+            logger.debug("Converted ops object to array", {
+              requestId,
+              originalType: "object",
+              convertedLength: opsArray.length,
+            });
+          }
+        }
+      }
+
       // Log incoming validation request
       logger.debug("Validating form data", {
         requestId,

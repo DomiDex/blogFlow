@@ -283,11 +283,23 @@ export class CMSService {
   private async mapFormDataToWebflowFields(formData: FormData): Promise<Partial<WebflowFieldData>> {
 
     // Convert Quill Delta to HTML
+    logger.debug("Converting Quill Delta to HTML", {
+      hasOps: !!formData.articleContent?.ops,
+      opsType: Array.isArray(formData.articleContent?.ops) ? 'array' : typeof formData.articleContent?.ops,
+      opsLength: formData.articleContent?.ops ? Object.keys(formData.articleContent.ops).length : 0,
+    });
+    
     const conversionResult = await convertDeltaToHtml(formData.articleContent);
     if (conversionResult.errors.length > 0) {
       throw new Error(`Failed to convert content: ${conversionResult.errors.join(", ")}`);
     }
     const htmlContent = conversionResult.html;
+    
+    logger.debug("HTML conversion result", {
+      htmlLength: htmlContent.length,
+      htmlPreview: htmlContent.substring(0, 100),
+      wordCount: conversionResult.wordCount,
+    });
 
     // Generate metadata
     const metadata = generateMetadata({
