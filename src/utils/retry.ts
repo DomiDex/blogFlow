@@ -8,13 +8,16 @@ import {
   type WebflowError as _WebflowError 
 } from "@utils/webflowErrors.ts";
 
+// Type for error constructors that we can check instanceof against
+type ErrorConstructor = { new(...args: unknown[]): Error; prototype: Error };
+
 export interface RetryOptions {
   maxAttempts?: number;
   initialDelay?: number;
   maxDelay?: number;
   backoffMultiplier?: number;
   retryableStatuses?: number[];
-  retryableErrors?: Array<new (...args: unknown[]) => Error>;
+  retryableErrors?: ErrorConstructor[];
   onRetry?: (error: Error, attempt: number) => void;
   timeout?: number;
 }
@@ -33,7 +36,7 @@ const defaultRetryOptions: Required<RetryOptions> = {
   maxDelay: 30000,
   backoffMultiplier: 2,
   retryableStatuses: [408, 429, 500, 502, 503, 504],
-  retryableErrors: [ExternalServiceError, TimeoutError],
+  retryableErrors: [ExternalServiceError as ErrorConstructor, TimeoutError as ErrorConstructor],
   onRetry: () => {},
   timeout: 30000, // 30 seconds default timeout
 };
@@ -56,7 +59,7 @@ function calculateDelay(
 function isRetryableError(
   error: unknown,
   retryableStatuses: number[],
-  retryableErrors: Array<new (...args: unknown[]) => Error>
+  retryableErrors: ErrorConstructor[]
 ): boolean {
   if (!error) return false;
 
