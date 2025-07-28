@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webflow Form Test - Local Development</title>
+    
+    <!-- Quill CSS -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #4353ff;
+        }
+        
+        #editor {
+            height: 400px;
+            margin-bottom: 20px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #4353ff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #3241e6;
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .response {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .response.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .response.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .response pre {
+            margin: 10px 0 0 0;
+            padding: 10px;
+            background: rgba(0,0,0,0.05);
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        
+        .info-box {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            color: #004085;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .loading {
+            display: none;
+            color: #666;
+            margin-left: 10px;
+        }
+        
+        .ql-toolbar {
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+        }
+        
+        .ql-container {
+            border-bottom-left-radius: 4px;
+            border-bottom-right-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Webflow Form Test</h1>
+        <p class="subtitle">Test your Webflow CMS integration locally</p>
+        
+        <div class="info-box">
+            <strong>Note:</strong> Make sure your server is running at 
+            <code id="server-url">http://localhost:8000</code>
+        </div>
+        
+        <form id="test-form">
+            <div class="form-group">
+                <label for="authorName">Author Name *</label>
+                <input type="text" id="authorName" name="authorName" required value="John Doe">
+            </div>
+            
+            <div class="form-group">
+                <label for="articleTitle">Article Title *</label>
+                <input type="text" id="articleTitle" name="articleTitle" required 
+                       value="Getting Started with Deno and Webflow">
+            </div>
+            
+            <div class="form-group">
+                <label for="metaDescription">Meta Description *</label>
+                <textarea id="metaDescription" name="metaDescription" rows="3" required>Learn how to integrate Deno with Webflow CMS using our middleware solution for seamless content management.</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Article Content *</label>
+                <div id="editor"></div>
+            </div>
+            
+            <div class="button-group">
+                <button type="submit" class="btn-primary" id="submit-btn">
+                    Submit to Webflow
+                </button>
+                <span class="loading" id="loading">Submitting...</span>
+                <button type="button" class="btn-secondary" onclick="fillSampleContent()">
+                    Fill Sample Content
+                </button>
+                <button type="button" class="btn-secondary" onclick="clearForm()">
+                    Clear Form
+                </button>
+            </div>
+        </form>
+        
+        <div id="response" class="response"></div>
+    </div>
+    
+    <!-- Quill JS -->
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    
+    <script>
+        // Suppress Quill deprecation warnings
+        const originalAddEventListener = EventTarget.prototype.addEventListener;
+        EventTarget.prototype.addEventListener = function(type, listener, options) {
+            if (type === 'DOMNodeInserted' || type === 'DOMNodeRemoved') {
+                // Silently ignore deprecated mutation events from Quill
+                return;
+            }
+            return originalAddEventListener.call(this, type, listener, options);
+        };
+        
+        // Initialize Quill editor
+        const quill = new Quill('#editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    ['link', 'blockquote', 'code-block'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'color': [] }, { 'background': [] }],
+                    ['clean']
+                ]
+            },
+            placeholder: 'Write your article content here...'
+        });
+        
+        // Restore original addEventListener
+        EventTarget.prototype.addEventListener = originalAddEventListener;
+        
+        // Set initial content
+        fillSampleContent();
+        
+        // Form submission
+        document.getElementById('test-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submit-btn');
+            const loading = document.getElementById('loading');
+            const responseDiv = document.getElementById('response');
+            
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            loading.style.display = 'inline';
+            responseDiv.style.display = 'none';
+            
+            // Get form data
+            const formData = {
+                authorName: document.getElementById('authorName').value,
+                articleTitle: document.getElementById('articleTitle').value,
+                metaDescription: document.getElementById('metaDescription').value,
+                articleContent: quill.getContents() // Send as object, not stringified
+            };
+            
+            try {
+                // Send request to server
+                const response = await fetch('http://localhost:8000/api/webflow-form', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                        // Don't set Origin header - browser will do it automatically
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                // Show response
+                responseDiv.className = response.ok ? 'response success' : 'response error';
+                responseDiv.style.display = 'block';
+                
+                if (response.ok && data.success) {
+                    responseDiv.innerHTML = `
+                        <strong>✅ Success!</strong> Article created in Webflow CMS.
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    responseDiv.innerHTML = `
+                        <strong>❌ Error:</strong> ${data.error || 'Unknown error'}
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+                
+            } catch (error) {
+                responseDiv.className = 'response error';
+                responseDiv.style.display = 'block';
+                responseDiv.innerHTML = `
+                    <strong>❌ Connection Error:</strong> ${error.message}
+                    <br><br>
+                    Make sure the server is running: <code>deno task dev</code>
+                `;
+            } finally {
+                submitBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        });
+        
+        // Helper functions
+        function fillSampleContent() {
+            quill.setContents({
+                ops: [
+                    { insert: "Introduction to Deno and Webflow Integration", attributes: { header: 1 } },
+                    { insert: "\n\n" },
+                    { insert: "In this article, we'll explore how to create a powerful integration between " },
+                    { insert: "Deno", attributes: { bold: true } },
+                    { insert: " and " },
+                    { insert: "Webflow CMS", attributes: { bold: true } },
+                    { insert: ". This integration allows you to:\n\n" },
+                    { insert: "Process rich text content from Quill.js\n", attributes: { list: "bullet" } },
+                    { insert: "Automatically generate metadata\n", attributes: { list: "bullet" } },
+                    { insert: "Create SEO-friendly slugs\n", attributes: { list: "bullet" } },
+                    { insert: "Calculate reading time\n", attributes: { list: "bullet" } },
+                    { insert: "\n" },
+                    { insert: "Getting Started", attributes: { header: 2 } },
+                    { insert: "\n\n" },
+                    { insert: "First, you'll need to set up your environment with the following:\n\n" },
+                    { insert: "Webflow API credentials\n", attributes: { list: "ordered" } },
+                    { insert: "Deno runtime installed\n", attributes: { list: "ordered" } },
+                    { insert: "Your CMS collection configured\n", attributes: { list: "ordered" } },
+                    { insert: "\n" },
+                    { insert: "Here's a simple example of how to submit content:\n\n" },
+                    { insert: "const response = await fetch('/api/webflow-form', {\n  method: 'POST',\n  body: JSON.stringify(formData)\n});", attributes: { 'code-block': true } },
+                    { insert: "\n\n" },
+                    { insert: "For more information, check out the " },
+                    { insert: "documentation", attributes: { link: "https://github.com/your-repo" } },
+                    { insert: ".\n" }
+                ]
+            });
+        }
+        
+        function clearForm() {
+            document.getElementById('test-form').reset();
+            quill.setContents([]);
+            document.getElementById('response').style.display = 'none';
+        }
+        
+        // Check server status on load
+        async function checkServer() {
+            try {
+                const response = await fetch('http://localhost:8000/health');
+                if (response.ok) {
+                    console.log('✅ Server is running');
+                }
+            } catch (error) {
+                const responseDiv = document.getElementById('response');
+                responseDiv.className = 'response error';
+                responseDiv.style.display = 'block';
+                responseDiv.innerHTML = `
+                    <strong>⚠️ Server Not Running:</strong> 
+                    Please start the server with <code>deno task dev</code>
+                `;
+            }
+        }
+        
+        // Check server on page load
+        checkServer();
+    </script>
+</body>
+</html>

@@ -4,6 +4,8 @@
     "start": "deno run --allow-net --allow-env src/main.ts",
     "test": "deno test --allow-net --allow-env --allow-read",
     "test:cors": "deno run --allow-net scripts/test-cors.ts",
+    "test:form": "deno run --allow-net --allow-read serve-test.ts",
+    "test:api": "deno run --allow-net --allow-env --allow-read scripts/test-form.ts",
     "deploy": "deployctl deploy --project=webflow-middleware --prod src/main.ts",
     "check": "deno check src/**/*.ts && deno lint && deno fmt --check",
     "fix:lockfile": "deno run --allow-read --allow-write --allow-run scripts/fix-lockfile.ts",

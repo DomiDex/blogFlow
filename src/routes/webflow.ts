@@ -11,8 +11,12 @@ import {
   validationRateLimit
 } from "@middleware/validation.ts";
 import type { FormData, DraftFormData, UpdateFormData } from "@utils/validation.ts";
+import { CMSService } from "@services/cmsService.ts";
 
 export const webflowRoutes = new Hono<{ Variables: Variables }>();
+
+// Initialize CMS service
+const cmsService = new CMSService();
 
 // Main form submission endpoint with comprehensive validation
 webflowRoutes.post(
@@ -20,7 +24,7 @@ webflowRoutes.post(
   validationRateLimit(),
   createFormValidation,
   validateContentLength({ minWords: 50, maxWords: 5000 }),
-  (c) => {
+  async (c) => {
     const requestId = c.get("requestId") as string;
     const validatedData = getValidatedData<FormData>(c);
     
@@ -32,42 +36,77 @@ webflowRoutes.post(
       publishNow: validatedData.publishNow,
     });
 
-    // TODO: Next tasks will implement:
-    // - Quill Delta to HTML conversion (Task 17)
-    // - HTML sanitization (Task 18) 
-    // - Metadata generation (Task 19)
-    // - Field mapping to Webflow CMS (Task 20)
-    // - Webflow CMS item creation
+    try {
+      // Create CMS item (as draft by default, unless publishNow is true)
+      const result = await cmsService.createCMSItem(
+        validatedData,
+        !validatedData.publishNow // isDraft
+      );
 
-    // Placeholder response with validated data structure
-    return c.json({
-      success: true,
-      message: "Form submission validated successfully",
-      data: {
-        authorName: validatedData.authorName,
-        articleTitle: validatedData.articleTitle,
-        metaDescription: validatedData.metaDescription,
-        contentPreview: extractTextPreview(validatedData.articleContent, 100),
-        wordCount: extractWordCount(validatedData.articleContent),
-        publishNow: validatedData.publishNow,
-        slug: validatedData.slug,
-        categories: validatedData.categories?.length || 0,
-        tags: validatedData.tags?.length || 0,
-      },
-      processing: {
-        timestamp: new Date().toISOString(),
-        requestId,
-        validationPassed: true,
-        nextSteps: [
-          "Convert Quill Delta to HTML",
-          "Sanitize HTML content",
-          "Generate metadata (reading time, intro text)",
-          "Map fields to Webflow CMS structure",
-          "Create Webflow CMS item",
-          "Publish item (if requested)"
-        ]
+      if (!result.success) {
+        logger.error("Failed to create CMS item", {
+          requestId,
+          error: result.error ? new Error(result.error) : undefined,
+        });
+        return c.json({
+          success: false,
+          message: "Failed to create CMS item",
+          error: result.error,
+        }, 500);
       }
-    });
+
+      // If publishNow is true, publish the item
+      if (validatedData.publishNow && result.item) {
+        const publishResult = await cmsService.publishCMSItem(result.item.id);
+        if (!publishResult.success) {
+          logger.warn("Item created but publishing failed", {
+            requestId,
+            itemId: result.item.id,
+            error: publishResult.error ? new Error(publishResult.error) : undefined,
+          });
+        }
+      }
+
+      logger.info("CMS item created successfully", {
+        requestId,
+        itemId: result.item?.id,
+        slug: result.slug,
+        published: validatedData.publishNow,
+      });
+
+      return c.json({
+        success: true,
+        message: "Article created successfully",
+        data: {
+          itemId: result.item?.id,
+          slug: result.slug,
+          authorName: validatedData.authorName,
+          articleTitle: validatedData.articleTitle,
+          metaDescription: validatedData.metaDescription,
+          contentPreview: extractTextPreview(validatedData.articleContent, 100),
+          wordCount: extractWordCount(validatedData.articleContent),
+          published: validatedData.publishNow,
+          categories: validatedData.categories?.length || 0,
+          tags: validatedData.tags?.length || 0,
+        },
+        item: result.item,
+        processing: {
+          timestamp: new Date().toISOString(),
+          requestId,
+          status: "completed",
+        }
+      });
+    } catch (error) {
+      logger.error("Unexpected error in form submission", {
+        requestId,
+        error: error instanceof Error ? error : new Error("Unknown error"),
+      });
+      return c.json({
+        success: false,
+        message: "An unexpected error occurred",
+        error: error instanceof Error ? error.message : "Unknown error",
+      }, 500);
+    }
   }
 );
 

@@ -16,6 +16,8 @@ const getAllowedOrigins = (): string[] => {
   // Add localhost for development
   if (isDevelopment) {
     origins.push("http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000");
+    // Add null origin for file:// protocol in development
+    origins.push("null");
   }
 
   return origins;

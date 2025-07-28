@@ -4,6 +4,7 @@ import { calculateReadingTime as calculateAdvancedReadingTime } from "@utils/rea
 import {
   generateUniqueSlug as generateUniqueSlugUtil,
 } from "@utils/slugGenerator.ts";
+import { extractIntroText as extractIntroTextUtil } from "@utils/introTextExtractor.ts";
 import { logger } from "@utils/logger.ts";
 import { ContentProcessingError } from "@utils/errors.ts";
 
@@ -74,8 +75,13 @@ export function generateMetadata(options: MetadataOptions): ArticleMetadata {
     const characterCount = plainText.length;
     const readingTime = readingTimeResult.time;
 
-    // Extract intro text
-    const introText = extractIntroText(plainText);
+    // Extract intro text using the advanced extractor
+    const introTextResult = extractIntroTextUtil(htmlContent, {
+      maxLength: CONFIG.INTRO_TEXT_LENGTH,
+      addEllipsis: true,
+      preserveSentences: true,
+    });
+    const introText = introTextResult.text;
 
     // Generate slug
     const slug = generateUniqueSlug(
@@ -159,32 +165,12 @@ export function extractIntroText(
   text: string,
   maxLength: number = CONFIG.INTRO_TEXT_LENGTH,
 ): string {
-  if (!text || !text.trim()) {
-    return "";
-  }
-
-  // Clean up the text
-  const cleanText = text
-    .trim()
-    .replace(/\s+/g, " ") // Normalize whitespace
-    .replace(/\n+/g, " "); // Replace newlines with spaces
-
-  // If text is shorter than max length, return as is
-  if (cleanText.length <= maxLength) {
-    return cleanText;
-  }
-
-  // Find the last space before maxLength to avoid cutting words
-  let cutIndex = maxLength;
-  const lastSpace = cleanText.lastIndexOf(" ", maxLength);
-
-  // If we found a space reasonably close to the max length, use it
-  if (lastSpace > maxLength * 0.8) {
-    cutIndex = lastSpace;
-  }
-
-  // Extract and add ellipsis
-  return cleanText.substring(0, cutIndex).trim() + "...";
+  const result = extractIntroTextUtil(text, {
+    maxLength,
+    addEllipsis: true,
+    preserveSentences: true,
+  });
+  return result.text;
 }
 
 /**
