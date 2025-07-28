@@ -64,7 +64,7 @@ function handleWebflowError(c: Context, error: WebflowError, requestId?: string)
     httpStatus: error.httpStatus,
     retryable: error.retryable,
     field: error.field,
-    error: error.toJSON(),
+    error: error instanceof Error ? error : new Error(String(error)),
   });
 
   // Create base error response
@@ -93,7 +93,16 @@ function handleWebflowError(c: Context, error: WebflowError, requestId?: string)
   }
 
   // Generic Webflow error
-  return c.json(errorResponse, error.httpStatus);
+  // Map to appropriate status codes
+  const statusCode = error.httpStatus === 400 ? 400 :
+                     error.httpStatus === 401 ? 401 :
+                     error.httpStatus === 403 ? 403 :
+                     error.httpStatus === 404 ? 404 :
+                     error.httpStatus === 429 ? 429 :
+                     error.httpStatus === 500 ? 500 :
+                     error.httpStatus === 502 ? 502 :
+                     error.httpStatus === 503 ? 503 : 500;
+  return c.json(errorResponse, statusCode);
 }
 
 /**
@@ -194,7 +203,7 @@ function handleAuthError(
     httpStatus: error.httpStatus,
   });
 
-  return c.json(authResponse, error.httpStatus);
+  return c.json(authResponse, error.httpStatus === 403 ? 403 : 401);
 }
 
 /**
@@ -249,7 +258,8 @@ function handleServerError(
     retryDelay: strategy.retryDelay,
   });
 
-  return c.json(serverResponse, error.httpStatus);
+  return c.json(serverResponse, error.httpStatus === 502 ? 502 : 
+                                error.httpStatus === 503 ? 503 : 500);
 }
 
 /**

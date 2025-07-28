@@ -2,6 +2,8 @@
 import { logger } from "@utils/logger.ts";
 import { createWebflowService, type WebflowService } from "@services/webflowService.ts";
 import { SlugService } from "@services/slugService.ts";
+import { convertDeltaToHtml } from "@services/contentProcessor.ts";
+import { generateMetadata } from "@services/metadataGenerator.ts";
 import type { WebflowCollectionItem, WebflowFieldData } from "../types/webflow.ts";
 import type { FormData } from "../types/form.ts";
 
@@ -279,22 +281,38 @@ export class CMSService {
    * Map form data to Webflow field structure
    */
   private async mapFormDataToWebflowFields(formData: FormData): Promise<Partial<WebflowFieldData>> {
-    const now = new Date().toISOString();
+
+    // Convert Quill Delta to HTML
+    const conversionResult = await convertDeltaToHtml(formData.articleContent);
+    if (conversionResult.errors.length > 0) {
+      throw new Error(`Failed to convert content: ${conversionResult.errors.join(", ")}`);
+    }
+    const htmlContent = conversionResult.html;
+
+    // Generate metadata
+    const metadata = generateMetadata({
+      title: formData.articleTitle,
+      htmlContent,
+      publishNow: formData.publishNow,
+      customSlug: formData.slug,
+    });
 
     // Generate unique slug
-    let slug = formData.slug;
-    if (!slug) {
+    let slug = metadata.slug;
+    if (formData.slug) {
+      // Validate provided slug
+      const validation = await this.slugService.validateSlug(formData.slug);
+      if (!validation.isValid || !validation.isUnique) {
+        throw new Error(`Invalid slug "${formData.slug}": ${validation.errors?.join(", ")}`);
+      }
+      slug = formData.slug;
+    } else {
+      // Use generated slug and ensure uniqueness
       const slugResult = await this.slugService.generateUniqueSlug(formData.articleTitle);
       if (slugResult.isValid && slugResult.isUnique) {
         slug = slugResult.finalSlug!;
       } else {
         throw new Error(`Failed to generate valid slug: ${slugResult.errors?.join(", ")}`);
-      }
-    } else {
-      // Validate provided slug
-      const validation = await this.slugService.validateSlug(slug);
-      if (!validation.isValid || !validation.isUnique) {
-        throw new Error(`Invalid slug "${slug}": ${validation.errors?.join(", ")}`);
       }
     }
 
@@ -304,16 +322,16 @@ export class CMSService {
       slug,
       "author-name": formData.authorName,
       "meta-description": formData.metaDescription,
-      post: formData.articleContent, // HTML content from Quill
+      post: htmlContent, // HTML content converted from Quill Delta
 
-      // Auto-generated metadata (convert to strings as Webflow expects)
-      "reading-time": formData.readingTime ? String(formData.readingTime) : undefined,
-      "intro-text": formData.introText,
+      // Auto-generated metadata
+      "reading-time": metadata.readingTime,
+      "intro-text": metadata.introText,
 
       // Timestamps
-      "created-on": now,
-      "updated-on": now,
-      "published-on": now, // Will be updated when published
+      "created-on": metadata.createdOn,
+      "updated-on": metadata.updatedOn,
+      "published-on": formData.publishNow ? metadata.publishedOn : undefined,
     };
   }
 

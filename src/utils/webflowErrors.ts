@@ -268,7 +268,7 @@ export function parseWebflowError(response: Response, responseBody?: unknown): W
   // Parse response body
   let errorData: Record<string, unknown> = {};
   if (responseBody && typeof responseBody === 'object') {
-    errorData = responseBody;
+    errorData = responseBody as Record<string, unknown>;
   }
 
   const context = {
@@ -300,11 +300,13 @@ export function parseWebflowError(response: Response, responseBody?: unknown): W
   // Authentication errors (401, 403)
   if (status === 401 || status === 403) {
     const code = status === 403 ? WebflowErrorCode.FORBIDDEN : WebflowErrorCode.UNAUTHORIZED;
-    const message = errorData.message || 
+    const message = typeof errorData.message === 'string' ? errorData.message : 
       (status === 403 ? "Forbidden: Insufficient permissions" : "Unauthorized: Invalid API token");
     
     // Check for missing scopes
-    if (errorData.message?.includes("missing") && errorData.message?.includes("scopes")) {
+    if (typeof errorData.message === 'string' && 
+        errorData.message.includes("missing") && 
+        errorData.message.includes("scopes")) {
       return new WebflowAuthError(errorData.message, WebflowErrorCode.MISSING_SCOPES, context);
     }
     
@@ -313,13 +315,13 @@ export function parseWebflowError(response: Response, responseBody?: unknown): W
 
   // Not found errors (404)
   if (status === 404) {
-    const _message = errorData.message || "Resource not found";
+    const _message = typeof errorData.message === 'string' ? errorData.message : "Resource not found";
     return new WebflowNotFoundError("Resource", undefined, context);
   }
 
   // Validation errors (400)
   if (status === 400) {
-    const message = errorData.message || "Validation error";
+    const message = typeof errorData.message === 'string' ? errorData.message : "Validation error";
     
     // Parse field-specific validation errors
     const fieldErrors: Array<{ field: string; message: string; value?: unknown }> = [];
@@ -330,8 +332,9 @@ export function parseWebflowError(response: Response, responseBody?: unknown): W
         if (typeof detail === 'object' && detail !== null) {
           const detailObj = detail as Record<string, unknown>;
           fieldErrors.push({
-            field: detailObj.param || key,
-            message: detailObj.description || detailObj.message || 'Invalid value',
+            field: typeof detailObj.param === 'string' ? detailObj.param : key,
+            message: (typeof detailObj.description === 'string' ? detailObj.description : 
+                     typeof detailObj.message === 'string' ? detailObj.message : 'Invalid value'),
             value: detailObj.value,
           });
         }
@@ -343,13 +346,13 @@ export function parseWebflowError(response: Response, responseBody?: unknown): W
 
   // Server errors (5xx)
   if (status >= 500) {
-    const message = errorData.message || `Server error: ${response.statusText}`;
+    const message = typeof errorData.message === 'string' ? errorData.message : `Server error: ${response.statusText}`;
     return new WebflowServerError(message, status, context);
   }
 
   // Client errors (4xx)
   if (status >= 400) {
-    const message = errorData.message || `Client error: ${response.statusText}`;
+    const message = typeof errorData.message === 'string' ? errorData.message : `Client error: ${response.statusText}`;
     return new WebflowError({
       code: WebflowErrorCode.UNKNOWN_ERROR,
       message,
@@ -362,7 +365,7 @@ export function parseWebflowError(response: Response, responseBody?: unknown): W
   // Unknown error
   return new WebflowError({
     code: WebflowErrorCode.UNKNOWN_ERROR,
-    message: errorData.message || "Unknown Webflow API error",
+    message: typeof errorData.message === 'string' ? errorData.message : "Unknown Webflow API error",
     httpStatus: status,
     retryable: false,
     context,
