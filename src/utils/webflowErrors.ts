@@ -305,8 +305,8 @@ export function parseWebflowError(response: Response, responseBody?: unknown): W
     
     // Check for missing scopes
     if (typeof errorData.message === 'string' && 
-        errorData.message.includes("missing") && 
-        errorData.message.includes("scopes")) {
+        errorData.message.toLowerCase().includes("missing") && 
+        errorData.message.toLowerCase().includes("scopes")) {
       return new WebflowAuthError(errorData.message, WebflowErrorCode.MISSING_SCOPES, context);
     }
     
