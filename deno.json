@@ -9,7 +9,7 @@
     "test:coverage": "deno run --allow-all scripts/coverage.ts",
     "test:watch": "deno test --watch --no-check --allow-all",
     "test:cors": "deno run --allow-net scripts/test-cors.ts",
-    "test:form": "deno run --allow-net --allow-read serve-test.ts",
+    "test:form": "deno run --allow-net --allow-read scripts/dev/serve-test.ts",
     "test:api": "deno run --allow-net --allow-env --allow-read scripts/test-form.ts",
     "deploy": "deployctl deploy --project=webflow-middleware --prod src/main.ts",
     "check": "deno check src/**/*.ts && deno lint && deno fmt --check",
@@ -42,7 +42,8 @@
     "@services/": "./src/services/",
     "@utils/": "./src/utils/",
     "@types/": "./src/types/",
-    "@app-types": "./src/types/hono.ts"
+    "@app-types": "./src/types/hono.ts",
+    "@tests/data": "./tests/data/index.ts"
   },
   "lint": {
     "include": ["src/"],
