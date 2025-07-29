@@ -11,7 +11,12 @@
     "test:cors": "deno run --allow-net scripts/test-cors.ts",
     "test:form": "deno run --allow-net --allow-read scripts/dev/serve-test.ts",
     "test:api": "deno run --allow-net --allow-env --allow-read scripts/test-form.ts",
-    "deploy": "deployctl deploy --project=webflow-middleware --prod src/main.ts",
+    "deploy": "deno run --allow-all scripts/deploy.ts",
+    "deploy:prod": "deno run --allow-all scripts/deploy.ts --prod",
+    "deploy:preview": "deno run --allow-all scripts/deploy.ts --preview",
+    "deploy:check": "deno run --allow-all scripts/check-env.ts",
+    "build": "deno run --allow-all scripts/build.ts",
+    "preview": "deno run --allow-all scripts/preview.ts",
     "check": "deno check src/**/*.ts && deno lint && deno fmt --check",
     "fix:lockfile": "deno run --allow-read --allow-write --allow-run scripts/fix-lockfile.ts",
     "lint": "deno lint"
@@ -62,5 +67,23 @@
       "singleQuote": false,
       "proseWrap": "preserve"
     }
+  },
+  "deploy": {
+    "project": "webflow-middleware",
+    "exclude": [
+      "tests/**",
+      ".env*",
+      "scripts/dev/**",
+      "*.md",
+      ".git/**",
+      ".vscode/**",
+      "*.log"
+    ],
+    "include": [
+      "src/**",
+      "deno.json",
+      "deno.lock"
+    ],
+    "entrypoint": "src/main.ts"
   }
 }

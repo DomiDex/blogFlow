@@ -146,9 +146,16 @@ class RateLimitStore {
 
   // Get store statistics
   getStats() {
+    let totalRequests = 0;
+    for (const [_, client] of this.clients.entries()) {
+      totalRequests += client.count;
+    }
+    
     return {
       clientsCount: this.clients.size,
       slidingWindowCount: this.slidingWindowLogs.size,
+      totalRequests,
+      activeClients: this.clients.size,
     };
   }
 

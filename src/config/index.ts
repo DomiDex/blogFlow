@@ -2,12 +2,19 @@
 import { load } from "@std/dotenv";
 import { z } from "zod";
 
-// Load environment variables in development
-if (Deno.env.get("NODE_ENV") !== "production") {
-  await load({
-    export: true,
-    allowEmptyValues: true,
-  });
+// Load environment variables from .env file only in development
+// In production (Deno Deploy), environment variables are already available
+try {
+  if (Deno.env.get("DENO_DEPLOYMENT_ID") === undefined) {
+    // We're not on Deno Deploy, try to load .env file
+    await load({
+      export: true,
+      allowEmptyValues: true,
+    });
+  }
+} catch (error) {
+  // If .env file doesn't exist, that's okay - we'll use system env vars
+  console.log("No .env file found, using system environment variables");
 }
 
 // Define configuration schema
