@@ -423,6 +423,7 @@ export function validateField<T>(
       return;
     }
 
+    // deno-lint-ignore no-explicit-any
     const fieldValue = (validatedData as any)[fieldName];
     const result = validator(fieldValue);
 
