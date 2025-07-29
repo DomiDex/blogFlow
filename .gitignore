@@ -24,3 +24,8 @@ coverage/
 # Build outputs
 dist/
 build/
+
+# Project planning and Claude-specific
+.claude/
+plan/
+tasks/

@@ -2,7 +2,7 @@
 
 import { assertEquals, assertExists } from "@std/assert";
 import { describe, it, beforeEach, afterEach } from "@std/testing/bdd";
-import { app } from "@/main.ts";
+import { setupIntegrationTest } from "../helpers/mock-app.ts";
 import { createMockFetch, createMockResponse, FakeTime, waitForPromises } from "../helpers/test-utils.ts";
 import * as fixtures from "../fixtures/quill-delta.ts";
 import * as webflowFixtures from "../fixtures/webflow-responses.ts";
@@ -13,6 +13,7 @@ describe("Rate Limiting Integration Tests", () => {
   let mockResponses: Map<string, Response>;
   let fakeTime: FakeTime;
   let originalEnv: { [key: string]: string | undefined };
+  const { app } = setupIntegrationTest();
   
   beforeEach(() => {
     originalFetch = globalThis.fetch;
@@ -65,8 +66,9 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "Rate Test",
         articleTitle: "Testing Rate Limits",
-        metaDescription: "Article within rate limit",
-        articleContent: fixtures.SIMPLE_DELTA
+        metaDescription: "Article within rate limit - this test validates that requests within the configured rate limit are properly allowed through",
+        articleContent: fixtures.SIMPLE_DELTA,
+        publishNow: false
       };
 
       // Make 5 requests (the limit)
@@ -98,8 +100,9 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "Rate Test",
         articleTitle: "Testing Rate Limit Exceeded",
-        metaDescription: "Article that exceeds rate limit",
-        articleContent: fixtures.SIMPLE_DELTA
+        metaDescription: "Article that exceeds rate limit - this test checks that requests exceeding the rate limit are properly blocked",
+        articleContent: fixtures.SIMPLE_DELTA,
+        publishNow: false
       };
 
       // Make 6 requests (1 over the limit)
@@ -145,8 +148,9 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "Window Test",
         articleTitle: "Testing Window Reset",
-        metaDescription: "Testing rate limit window",
-        articleContent: fixtures.SIMPLE_DELTA
+        metaDescription: "Testing rate limit window functionality to ensure that limits are properly reset after the configured time window expires",
+        articleContent: fixtures.SIMPLE_DELTA,
+        publishNow: false
       };
 
       // Make 5 requests (hit the limit)
@@ -203,8 +207,9 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "Sliding Window",
         articleTitle: "Testing Sliding Window",
-        metaDescription: "Testing sliding window rate limiting",
-        articleContent: fixtures.SIMPLE_DELTA
+        metaDescription: "Testing sliding window rate limiting implementation to verify that requests are tracked correctly within the time window",
+        articleContent: fixtures.SIMPLE_DELTA,
+        publishNow: false
       };
 
       // Make 3 requests
@@ -288,8 +293,9 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "IP Test",
         articleTitle: "Testing Per-IP Limits",
-        metaDescription: "Testing individual IP rate limiting",
-        articleContent: fixtures.SIMPLE_DELTA
+        metaDescription: "Testing individual IP rate limiting to ensure that rate limits are tracked separately for each client IP address",
+        articleContent: fixtures.SIMPLE_DELTA,
+        publishNow: false
       };
 
       // Client 1: Make 5 requests
@@ -342,8 +348,9 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "Proxy Test",
         articleTitle: "Testing Proxy Headers",
-        metaDescription: "Testing rate limiting with proxy headers",
-        articleContent: fixtures.SIMPLE_DELTA
+        metaDescription: "Testing rate limiting with proxy headers to verify correct client IP identification when requests come through proxies",
+        articleContent: fixtures.SIMPLE_DELTA,
+        publishNow: false
       };
 
       // Test various proxy header formats
@@ -353,13 +360,16 @@ describe("Rate Limiting Integration Tests", () => {
         { "CF-Connecting-IP": "203.0.113.1" }
       ];
 
-      for (const headers of proxyHeaders) {
+      for (const proxyHeader of proxyHeaders) {
         const response = await app.request("/api/webflow-form", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "Authorization": "Bearer test-token",
-            ...headers
+            ...Object.entries(proxyHeader).reduce((acc, [key, value]) => {
+              if (value !== undefined) acc[key] = value;
+              return acc;
+            }, {} as Record<string, string>)
           },
           body: JSON.stringify(formData)
         });
@@ -404,8 +414,9 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "Burst Test",
         articleTitle: "Testing Burst Protection",
-        metaDescription: "Testing rapid burst request handling",
-        articleContent: fixtures.SIMPLE_DELTA
+        metaDescription: "Testing rapid burst request handling to ensure the rate limiter can properly handle multiple concurrent requests",
+        articleContent: fixtures.SIMPLE_DELTA,
+        publishNow: false
       };
 
       // Send 10 requests as fast as possible
@@ -430,11 +441,11 @@ describe("Rate Limiting Integration Tests", () => {
       const responses = await Promise.all(burstPromises);
       
       // First 5 should succeed
-      const successCount = responses.filter(r => r.status === 201).length;
+      const successCount = responses.filter((r: Response) => r.status === 201).length;
       assertEquals(successCount, 5);
       
       // Rest should be rate limited
-      const limitedCount = responses.filter(r => r.status === 429).length;
+      const limitedCount = responses.filter((r: Response) => r.status === 429).length;
       assertEquals(limitedCount, 5);
     });
 
@@ -445,8 +456,9 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "Queue Test",
         articleTitle: "Testing Request Queuing",
-        metaDescription: "Testing request queue behavior",
-        articleContent: fixtures.SIMPLE_DELTA
+        metaDescription: "Testing request queue behavior when rate limits are more restrictive to verify proper queuing functionality",
+        articleContent: fixtures.SIMPLE_DELTA,
+        publishNow: false
       };
 
       // Track response times
@@ -456,22 +468,25 @@ describe("Rate Limiting Integration Tests", () => {
       // Make 4 requests
       const requests = [];
       for (let i = 0; i < 4; i++) {
+        const request = app.request("/api/webflow-form", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer test-token",
+            "X-Forwarded-For": "192.168.1.101"
+          },
+          body: JSON.stringify({
+            ...formData,
+            articleTitle: `Queue ${i + 1}`
+          })
+        });
+        
         requests.push(
-          app.request("/api/webflow-form", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": "Bearer test-token",
-              "X-Forwarded-For": "192.168.1.101"
-            },
-            body: JSON.stringify({
-              ...formData,
-              articleTitle: `Queue ${i + 1}`
-            })
-          }).then(response => {
+          (async () => {
+            const response = await request;
             responseTimes.push(Date.now() - startTime);
             return response;
-          })
+          })()
         );
       }
 
@@ -496,8 +511,9 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "Config Test",
         articleTitle: "Testing Custom Config",
-        metaDescription: "Testing custom rate limit configuration",
-        articleContent: fixtures.SIMPLE_DELTA
+        metaDescription: "Testing custom rate limit configuration to ensure environment variables are properly respected by the middleware",
+        articleContent: fixtures.SIMPLE_DELTA,
+        publishNow: false
       };
 
       // First request should succeed
@@ -557,8 +573,9 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "Header Test",
         articleTitle: "Testing Rate Limit Headers",
-        metaDescription: "Testing rate limit header information",
-        articleContent: fixtures.SIMPLE_DELTA
+        metaDescription: "Testing rate limit header information to verify that proper rate limit headers are included in API responses",
+        articleContent: fixtures.SIMPLE_DELTA,
+        publishNow: false
       };
 
       // Make first request
@@ -590,8 +607,9 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "Count Test",
         articleTitle: "Testing Remaining Count",
-        metaDescription: "Testing rate limit remaining count",
-        articleContent: fixtures.SIMPLE_DELTA
+        metaDescription: "Testing rate limit remaining count to ensure the X-RateLimit-Remaining header correctly tracks available requests",
+        articleContent: fixtures.SIMPLE_DELTA,
+        publishNow: false
       };
 
       // Make 4 requests and check remaining count
@@ -625,8 +643,9 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "Distributed Test",
         articleTitle: "Testing Distributed Clients",
-        metaDescription: "Testing distributed client identification",
-        articleContent: fixtures.SIMPLE_DELTA
+        metaDescription: "Testing distributed client identification across multiple proxies and load balancers for proper rate limiting",
+        articleContent: fixtures.SIMPLE_DELTA,
+        publishNow: false
       };
 
       // Different proxy chains but same origin IP

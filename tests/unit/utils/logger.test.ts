@@ -25,16 +25,14 @@ describe("Logger", () => {
     // Mock Date for consistent timestamps
     dateNowStub = stub(Date.prototype, "toISOString", () => mockTimestamp);
     
-    // Mock environment
-    envStub = stub(Deno, "env", {
-      get: (key: string) => {
-        switch (key) {
-          case "NODE_ENV": return "test";
-          case "LOG_LEVEL": return "debug";
-          default: return undefined;
-        }
+    // Mock environment - use Deno.env instead of Deno
+    envStub = stub(Deno.env, "get", (key: string) => {
+      switch (key) {
+        case "NODE_ENV": return "test";
+        case "LOG_LEVEL": return "debug";
+        default: return undefined;
       }
-    } as any);
+    });
   });
 
   afterEach(() => {
@@ -51,15 +49,13 @@ describe("Logger", () => {
     it("should respect log levels", () => {
       // Set log level to error
       envStub.restore();
-      envStub = stub(Deno, "env", {
-        get: (key: string) => {
-          switch (key) {
-            case "NODE_ENV": return "test";
-            case "LOG_LEVEL": return "error";
-            default: return undefined;
-          }
+      envStub = stub(Deno.env, "get", (key: string) => {
+        switch (key) {
+          case "NODE_ENV": return "test";
+          case "LOG_LEVEL": return "error";
+          default: return undefined;
         }
-      } as any);
+      });
       
       const errorLogger = new Logger();
       
@@ -90,15 +86,13 @@ describe("Logger", () => {
   describe("Log Formatting", () => {
     it("should format production logs as JSON", () => {
       envStub.restore();
-      envStub = stub(Deno, "env", {
-        get: (key: string) => {
-          switch (key) {
-            case "NODE_ENV": return "production";
-            case "LOG_LEVEL": return "info";
-            default: return undefined;
-          }
+      envStub = stub(Deno.env, "get", (key: string) => {
+        switch (key) {
+          case "NODE_ENV": return "production";
+          case "LOG_LEVEL": return "info";
+          default: return undefined;
         }
-      } as any);
+      });
       
       const prodLogger = new Logger();
       prodLogger.info("Test message", { requestId: "123" });
@@ -116,15 +110,13 @@ describe("Logger", () => {
 
     it("should format development logs with colors", () => {
       envStub.restore();
-      envStub = stub(Deno, "env", {
-        get: (key: string) => {
-          switch (key) {
-            case "NODE_ENV": return "development";
-            case "LOG_LEVEL": return "debug";
-            default: return undefined;
-          }
+      envStub = stub(Deno.env, "get", (key: string) => {
+        switch (key) {
+          case "NODE_ENV": return "development";
+          case "LOG_LEVEL": return "debug";
+          default: return undefined;
         }
-      } as any);
+      });
       
       const devLogger = new Logger();
       devLogger.info("Test message");
@@ -212,15 +204,13 @@ describe("Logger", () => {
   describe("Error Logging", () => {
     it("should log error with stack trace in development", () => {
       envStub.restore();
-      envStub = stub(Deno, "env", {
-        get: (key: string) => {
-          switch (key) {
-            case "NODE_ENV": return "development";
-            case "LOG_LEVEL": return "debug";
-            default: return undefined;
-          }
+      envStub = stub(Deno.env, "get", (key: string) => {
+        switch (key) {
+          case "NODE_ENV": return "development";
+          case "LOG_LEVEL": return "debug";
+          default: return undefined;
         }
-      } as any);
+      });
       
       const devLogger = new Logger();
       const error = new Error("Test error");
@@ -237,15 +227,13 @@ describe("Logger", () => {
 
     it("should include error in JSON format for production", () => {
       envStub.restore();
-      envStub = stub(Deno, "env", {
-        get: (key: string) => {
-          switch (key) {
-            case "NODE_ENV": return "production";
-            case "LOG_LEVEL": return "info";
-            default: return undefined;
-          }
+      envStub = stub(Deno.env, "get", (key: string) => {
+        switch (key) {
+          case "NODE_ENV": return "production";
+          case "LOG_LEVEL": return "info";
+          default: return undefined;
         }
-      } as any);
+      });
       
       const prodLogger = new Logger();
       const error = new Error("Test error");
@@ -354,9 +342,9 @@ describe("Logger", () => {
     });
 
     it("should handle hostname errors gracefully", () => {
-      const hostnameStub = stub(Deno, "hostname", (() => {
+      const hostnameStub = stub(Deno, "hostname", () => {
         throw new Error("Hostname not available");
-      }) as any);
+      });
       
       logger = new Logger();
       logger.info("Test message");
@@ -368,15 +356,13 @@ describe("Logger", () => {
 
     it("should default to info level if LOG_LEVEL is invalid", () => {
       envStub.restore();
-      envStub = stub(Deno, "env", {
-        get: (key: string) => {
-          switch (key) {
-            case "NODE_ENV": return "test";
-            case "LOG_LEVEL": return "invalid";
-            default: return undefined;
-          }
+      envStub = stub(Deno.env, "get", (key: string) => {
+        switch (key) {
+          case "NODE_ENV": return "test";
+          case "LOG_LEVEL": return "invalid";
+          default: return undefined;
         }
-      } as any);
+      });
       
       const invalidLogger = new Logger();
       

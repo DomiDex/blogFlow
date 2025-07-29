@@ -2,7 +2,7 @@
 
 import { assertEquals, assertExists } from "@std/assert";
 import { describe, it, beforeEach, afterEach } from "@std/testing/bdd";
-import { app } from "@/main.ts";
+import { setupIntegrationTest } from "../helpers/mock-app.ts";
 import { createMockFetch, createMockResponse, assertAsyncThrows } from "../helpers/test-utils.ts";
 import * as fixtures from "../fixtures/quill-delta.ts";
 import * as webflowFixtures from "../fixtures/webflow-responses.ts";
@@ -13,6 +13,7 @@ describe("Webflow API Integration Tests", () => {
   let originalFetch: typeof fetch;
   let mockResponses: Map<string, Response>;
   let requestLog: Array<{ url: string; method: string; body?: any }>;
+  const { app } = setupIntegrationTest();
   
   beforeEach(() => {
     originalFetch = globalThis.fetch;
@@ -352,13 +353,12 @@ describe("Webflow API Integration Tests", () => {
         timeout: 100 // 100ms timeout
       });
 
-      await assertAsyncThrows(
-        async () => {
-          await service.checkSlugExists("test-slug");
-        },
-        Error,
-        "Request timeout"
-      );
+      try {
+        await service.checkSlugExists("test-slug");
+        throw new Error("Expected timeout error");
+      } catch (error) {
+        assertEquals((error as Error).message, "Request timeout");
+      }
     });
   });
 

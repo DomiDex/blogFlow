@@ -2,7 +2,7 @@
 
 import { assertEquals, assertExists } from "@std/assert";
 import { describe, it, beforeEach, afterEach } from "@std/testing/bdd";
-import { app } from "@/main.ts";
+import { setupIntegrationTest } from "../helpers/mock-app.ts";
 import { createMockFetch, createMockResponse, FakeTime } from "../helpers/test-utils.ts";
 import * as fixtures from "../fixtures/quill-delta.ts";
 import * as webflowFixtures from "../fixtures/webflow-responses.ts";
@@ -13,6 +13,7 @@ describe("End-to-End Flow Tests", () => {
   let originalFetch: typeof fetch;
   let mockResponses: Map<string, Response>;
   let fakeTime: FakeTime;
+  const { app } = setupIntegrationTest();
   
   beforeEach(() => {
     originalFetch = globalThis.fetch;
@@ -135,7 +136,7 @@ describe("End-to-End Flow Tests", () => {
         {
           authorName: "山田太郎",
           articleTitle: "Deno開発完全ガイド",
-          metaDescription: "モジュール、テスト、デプロイメントを含むDeno開発の包括的なガイド",
+          metaDescription: "モジュール、テスト、デプロイメントを含むDeno開発の包括的なガイド - A comprehensive guide to Deno development",
           content: "これはDenoに関する完全なガイドです。モジュール、テスト、デプロイメントに関する情報が含まれています。"
         }
       ];
@@ -267,7 +268,7 @@ describe("End-to-End Flow Tests", () => {
       const formData: FormData = {
         authorName: "Performance Tester",
         articleTitle: "Performance Test Article",
-        metaDescription: "Testing submission performance and response times",
+        metaDescription: "Testing submission performance and response times to ensure API meets performance requirements",
         articleContent: fixtures.COMPLEX_DELTA,
         publishNow: false
       };
@@ -392,7 +393,7 @@ describe("End-to-End Flow Tests", () => {
       const formData: FormData = {
         authorName: "Edge Case Tester",
         articleTitle: exactTitle,
-        metaDescription: "Testing exact character limits for various fields",
+        metaDescription: "Testing exact character limits for various fields to validate field constraints are enforced correctly",
         articleContent: fixtures.SIMPLE_DELTA,
         publishNow: false
       };
@@ -445,7 +446,7 @@ describe("End-to-End Flow Tests", () => {
       const formData: FormData = {
         authorName: "Duplicate Tester",
         articleTitle: "Duplicate Title",
-        metaDescription: "Testing slug generation with duplicates",
+        metaDescription: "Testing slug generation with duplicates to ensure unique slugs are created when conflicts exist",
         articleContent: fixtures.SIMPLE_DELTA,
         publishNow: false
       };

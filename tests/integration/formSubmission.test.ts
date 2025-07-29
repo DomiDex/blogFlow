@@ -2,8 +2,7 @@
 
 import { assertEquals, assertExists } from "@std/assert";
 import { describe, it, beforeEach, afterEach } from "@std/testing/bdd";
-import { Hono } from "@hono/hono";
-import { app } from "@/main.ts";
+import { setupIntegrationTest } from "../helpers/mock-app.ts";
 import { createMockFetch, createMockResponse, waitForPromises } from "../helpers/test-utils.ts";
 import * as fixtures from "../fixtures/quill-delta.ts";
 import * as webflowFixtures from "../fixtures/webflow-responses.ts";
@@ -12,6 +11,7 @@ import type { FormData } from "@/types/form.ts";
 describe("Form Submission Integration Tests", () => {
   let originalFetch: typeof fetch;
   let mockResponses: Map<string, Response>;
+  const { app } = setupIntegrationTest();
   
   beforeEach(() => {
     originalFetch = globalThis.fetch;
@@ -135,7 +135,7 @@ describe("Form Submission Integration Tests", () => {
       const incompleteData = {
         authorName: "John Doe",
         // missing articleTitle
-        metaDescription: "Description",
+        metaDescription: "This is a test article to validate missing field behavior in the form submission process",
         articleContent: fixtures.SIMPLE_DELTA
       };
 
@@ -160,7 +160,7 @@ describe("Form Submission Integration Tests", () => {
       const invalidData = {
         authorName: "John Doe",
         articleTitle: "Invalid Content Article",
-        metaDescription: "Article with invalid content structure",
+        metaDescription: "Article with invalid content structure to test validation error handling and response formatting",
         articleContent: {
           ops: "not an array" // Invalid structure
         }
@@ -186,7 +186,7 @@ describe("Form Submission Integration Tests", () => {
       const shortContentData = {
         authorName: "John Doe",
         articleTitle: "Short Article",
-        metaDescription: "Article with content that is too short",
+        metaDescription: "Article with content that is too short to test minimum word count validation requirements",
         articleContent: {
           ops: [{ insert: "Too short." }]
         }
@@ -250,7 +250,7 @@ describe("Form Submission Integration Tests", () => {
       const formData = new URLSearchParams({
         authorName: "Form Author",
         articleTitle: "Form Encoded Article",
-        metaDescription: "Article submitted via form encoding",
+        metaDescription: "Article submitted via form encoding to test different content-type handling in the API",
         articleContent: JSON.stringify(fixtures.SIMPLE_DELTA)
       });
 
@@ -289,7 +289,7 @@ describe("Form Submission Integration Tests", () => {
       const formData: FormData = {
         authorName: "John Doe",
         articleTitle: "Unauthorized Article",
-        metaDescription: "This should fail due to missing auth",
+        metaDescription: "This should fail due to missing auth to test authentication requirement enforcement",
         articleContent: fixtures.SIMPLE_DELTA,
         publishNow: false
       };
@@ -362,7 +362,8 @@ describe("Form Submission Integration Tests", () => {
             { insert: "\n\nAnd some emojis: =� <� d <" },
             { insert: "\n\nAnd various quotes: \"curly\" 'single' «guillemets»" }
           ]
-        }
+        },
+        publishNow: false
       };
 
       const response = await app.request("/api/webflow-form", {

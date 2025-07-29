@@ -4,14 +4,21 @@ import { corsMiddleware } from "./cors.ts";
 import { securityMiddleware, requestValidation } from "./security.ts";
 import { requestLogger } from "./requestLogger.ts";
 import { errorHandler } from "./errorHandler.ts";
-import { rateLimiter, formRateLimiter, createWhitelistSkip } from "./rateLimiter.ts";
+import { rateLimiter, formRateLimiter, createWhitelistSkip, createRateLimiter } from "./rateLimiter.ts";
 import type { Variables } from "@app-types";
+
+export interface MiddlewareConfig {
+  testing?: boolean;
+}
 
 /**
  * Register all middleware in the correct order
  * Order matters: error handler -> request logger -> security -> rate limit -> validation -> cors -> routes
  */
-export function registerMiddleware(app: Hono<{ Variables: Variables }>): void {
+export function registerMiddleware(
+  app: Hono<{ Variables: Variables }>, 
+  config?: MiddlewareConfig
+): void {
   // Error handler middleware (must wrap all routes)
   app.use("*", errorHandler());
 

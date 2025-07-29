@@ -1,20 +1,12 @@
 /// <reference lib="deno.ns" />
-import { Hono } from "@hono/hono";
 import { serve } from "@std/http/server";
 import { config } from "@config/index.ts";
-import { registerRoutes } from "@routes/index.ts";
-import { registerMiddleware } from "@middleware/index.ts";
 import { logger } from "@utils/logger.ts";
+import { createApp } from "@/app.ts";
 import type { Variables } from "@app-types";
 
-// Create Hono app with strict typing
-const app = new Hono<{ Variables: Variables }>();
-
-// Register global middleware (order matters!)
-registerMiddleware(app);
-
-// Register all routes
-registerRoutes(app);
+// Create Hono app using factory
+const app = createApp();
 
 // Start server
 const port = config.PORT;
@@ -45,6 +37,7 @@ console.log(`
 // Use Deno's native HTTP server
 // Export app for testing
 export { app };
+export type { Variables };
 
 // Start server if not in test mode
 if (import.meta.main) {

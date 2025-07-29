@@ -2,7 +2,7 @@
 
 import { assertEquals, assertExists } from "@std/assert";
 import { describe, it, beforeEach, afterEach } from "@std/testing/bdd";
-import { app } from "@/main.ts";
+import { setupIntegrationTest } from "../helpers/mock-app.ts";
 import { createMockFetch, createMockResponse, assertAsyncThrows } from "../helpers/test-utils.ts";
 import * as fixtures from "../fixtures/quill-delta.ts";
 import * as webflowFixtures from "../fixtures/webflow-responses.ts";
@@ -12,6 +12,7 @@ describe("Error Handling Integration Tests", () => {
   let originalFetch: typeof fetch;
   let mockResponses: Map<string, Response>;
   let errorLogs: Array<{ level: string; message: string; error?: any }>;
+  const { app } = setupIntegrationTest();
   
   beforeEach(() => {
     originalFetch = globalThis.fetch;
@@ -35,14 +36,14 @@ describe("Error Handling Integration Tests", () => {
   describe("Network Error Handling", () => {
     it("should handle complete network failure gracefully", async () => {
       // Simulate network failure
-      globalThis.fetch = async () => {
+      globalThis.fetch = async (): Promise<Response> => {
         throw new TypeError("Failed to fetch");
       };
 
       const formData: FormData = {
         authorName: "Network Test",
         articleTitle: "Network Failure Test",
-        metaDescription: "Testing network failure handling",
+        metaDescription: "Testing network failure handling to ensure proper error responses when external services fail",
         articleContent: fixtures.SIMPLE_DELTA,
         publishNow: false
       };
@@ -71,7 +72,7 @@ describe("Error Handling Integration Tests", () => {
       const formData: FormData = {
         authorName: "DNS Test",
         articleTitle: "DNS Failure Test",
-        metaDescription: "Testing DNS resolution failure",
+        metaDescription: "Testing DNS resolution failure to verify graceful handling of infrastructure issues",
         articleContent: fixtures.SIMPLE_DELTA,
         publishNow: false
       };
@@ -93,18 +94,19 @@ describe("Error Handling Integration Tests", () => {
 
     it("should handle connection timeout", async () => {
       let attemptCount = 0;
-      globalThis.fetch = async () => {
+      globalThis.fetch = async (): Promise<Response> => {
         attemptCount++;
         // Simulate timeout
         await new Promise((_, reject) => {
           setTimeout(() => reject(new Error("Request timeout")), 100);
         });
+        throw new Error("Request timeout"); // This line will never be reached but satisfies TypeScript
       };
 
       const formData: FormData = {
         authorName: "Timeout Test",
         articleTitle: "Connection Timeout Test",
-        metaDescription: "Testing connection timeout handling",
+        metaDescription: "Testing connection timeout handling to ensure requests fail gracefully when services are slow",
         articleContent: fixtures.SIMPLE_DELTA,
         publishNow: false
       };
@@ -156,7 +158,7 @@ describe("Error Handling Integration Tests", () => {
       const formData: FormData = {
         authorName: "Retry Test",
         articleTitle: "Intermittent Failure Recovery",
-        metaDescription: "Testing recovery from intermittent failures",
+        metaDescription: "Testing recovery from intermittent failures to validate retry logic and resilience mechanisms",
         articleContent: fixtures.SIMPLE_DELTA,
         publishNow: false
       };
@@ -202,7 +204,7 @@ describe("Error Handling Integration Tests", () => {
       const formData: FormData = {
         authorName: "Partial Success",
         articleTitle: "Article with Publishing Failure",
-        metaDescription: "Testing partial success scenario",
+        metaDescription: "Testing partial success scenario when some API operations succeed while others fail",
         articleContent: fixtures.SIMPLE_DELTA,
         publishNow: true
       };
@@ -231,7 +233,7 @@ describe("Error Handling Integration Tests", () => {
       const invalidData = {
         authorName: "", // Empty
         articleTitle: "a", // Too short
-        metaDescription: "", // Empty
+        metaDescription: "Testing validation with empty meta description to check field requirement handling", // Empty
         articleContent: { ops: [] } // Empty content
       };
 
@@ -260,7 +262,7 @@ describe("Error Handling Integration Tests", () => {
       const malformedContent = {
         authorName: "Test Author",
         articleTitle: "Test Article",
-        metaDescription: "Test description",
+        metaDescription: "Test description for validating content processing with minimal metadata provided",
         articleContent: {
           ops: [
             { insert: "Valid text" },
@@ -334,7 +336,7 @@ describe("Error Handling Integration Tests", () => {
       const responses = await Promise.all(submissions);
       
       // All should fail gracefully
-      responses.forEach(response => {
+      responses.forEach((response: Response) => {
         assertEquals(response.status >= 500, true);
       });
     });
@@ -360,7 +362,7 @@ describe("Error Handling Integration Tests", () => {
       const formData: FormData = {
         authorName: "Security Test",
         articleTitle: "Testing Error Sanitization",
-        metaDescription: "Ensuring no sensitive data leaks",
+        metaDescription: "Ensuring no sensitive data leaks in error responses to maintain security best practices",
         articleContent: fixtures.SIMPLE_DELTA,
         publishNow: false
       };
@@ -406,7 +408,7 @@ describe("Error Handling Integration Tests", () => {
         const formData: FormData = {
           authorName: `Circuit Test ${i}`,
           articleTitle: `Circuit Breaker Test ${i}`,
-          metaDescription: "Testing circuit breaker",
+          metaDescription: "Testing circuit breaker pattern implementation to prevent cascading failures in the system",
           articleContent: fixtures.SIMPLE_DELTA,
           publishNow: false
         };
@@ -427,7 +429,7 @@ describe("Error Handling Integration Tests", () => {
       
       // After several failures, circuit should open
       const lastResponses = responses.slice(-2);
-      lastResponses.forEach(response => {
+      lastResponses.forEach((response: Response) => {
         // Should fail fast without attempting request
         assertEquals(response.status, 503);
       });
@@ -461,7 +463,7 @@ describe("Error Handling Integration Tests", () => {
       const formData: FormData = {
         authorName: "Degraded Service",
         articleTitle: "Testing Graceful Degradation",
-        metaDescription: "Article created despite slug service failure",
+        metaDescription: "Article created despite slug service failure to test graceful degradation of non-critical services",
         articleContent: fixtures.SIMPLE_DELTA,
         publishNow: false
       };
@@ -496,7 +498,7 @@ describe("Error Handling Integration Tests", () => {
       const formData: FormData = {
         authorName: "Log Test",
         articleTitle: "Error Logging Test",
-        metaDescription: "Testing error logging",
+        metaDescription: "Testing error logging to ensure all errors are properly captured and logged for debugging",
         articleContent: fixtures.SIMPLE_DELTA,
         publishNow: false
       };
