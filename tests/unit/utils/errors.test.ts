@@ -37,7 +37,7 @@ Deno.test("BaseError - creates error with default properties", () => {
   assertEquals(error.statusCode, 500);
   assertEquals(error.isOperational, true);
   assertInstanceOf(error, Error);
-  assertInstanceOf(error, BaseError);
+  assertEquals(error instanceof BaseError, true);
 });
 
 Deno.test("BaseError - creates error with custom properties", () => {
@@ -65,7 +65,7 @@ Deno.test("ValidationError - creates validation error", () => {
   assertEquals(error.field, "email");
   assertEquals(error.value, "invalid@");
   assertInstanceOf(error, ValidationError);
-  assertInstanceOf(error, BaseError);
+  assertEquals(error instanceof BaseError, true);
 });
 
 Deno.test("WebflowError - creates API error", () => {
@@ -83,7 +83,7 @@ Deno.test("WebflowError - creates API error", () => {
   assertEquals(error.webflowCode, "rate_limit_exceeded");
   assertEquals(error.webflowMessage, "Rate limit exceeded");
   assertInstanceOf(error, WebflowError);
-  assertInstanceOf(error, BaseError);
+  assertEquals(error instanceof BaseError, true);
 });
 
 Deno.test("AuthenticationError - creates auth error", () => {

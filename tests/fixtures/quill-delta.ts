@@ -2,9 +2,11 @@
  * Quill Delta test fixtures
  */
 
-export const SIMPLE_DELTA = {
+import type { QuillDelta } from "@utils/validation.ts";
+
+export const SIMPLE_DELTA: QuillDelta = {
   ops: [
-    { insert: "Hello world" },
+    { insert: "This is a simple article with enough content to pass validation. It contains multiple sentences and paragraphs to ensure we meet the minimum word count requirement. The content is straightforward without any special formatting, making it ideal for basic testing scenarios. We need to have at least fifty words in total to pass the validation checks that are enforced by the middleware." },
     { insert: "\n" }
   ]
 };
@@ -19,7 +21,7 @@ export const FORMATTED_DELTA = {
   ]
 };
 
-export const COMPLEX_DELTA = {
+export const COMPLEX_DELTA: QuillDelta = {
   ops: [
     { insert: "Welcome to My Blog Post", attributes: { header: 1 } },
     { insert: "\n\n" },
@@ -29,22 +31,22 @@ export const COMPLEX_DELTA = {
     { insert: "italic text", attributes: { italic: true } },
     { insert: ", as well as " },
     { insert: "a link", attributes: { link: "https://example.com" } },
-    { insert: ".\n\n" },
-    { insert: "Here's a list:\n" },
-    { insert: "First item\n", attributes: { list: "bullet" } },
-    { insert: "Second item\n", attributes: { list: "bullet" } },
-    { insert: "Third item\n", attributes: { list: "bullet" } },
+    { insert: ". This paragraph contains additional content to ensure we meet the minimum word count requirement for article validation. We need at least fifty words to pass the content validation checks.\n\n" },
+    { insert: "Here's a list of important points:\n" },
+    { insert: "First item with some detailed explanation about why this point matters\n", attributes: { list: "bullet" } },
+    { insert: "Second item that includes additional context and information\n", attributes: { list: "bullet" } },
+    { insert: "Third item with supporting details and examples\n", attributes: { list: "bullet" } },
     { insert: "\n" },
-    { insert: "And a numbered list:\n" },
-    { insert: "One\n", attributes: { list: "ordered" } },
-    { insert: "Two\n", attributes: { list: "ordered" } },
-    { insert: "Three\n", attributes: { list: "ordered" } },
+    { insert: "And a numbered list of steps:\n" },
+    { insert: "Step one: Initialize the project with proper configuration\n", attributes: { list: "ordered" } },
+    { insert: "Step two: Set up the development environment\n", attributes: { list: "ordered" } },
+    { insert: "Step three: Deploy to production\n", attributes: { list: "ordered" } },
     { insert: "\n" },
-    { insert: "console.log('Code block');\n", attributes: { "code-block": true } },
+    { insert: "console.log('Code block example');\nconst result = performOperation();\n", attributes: { "code-block": true } },
     { insert: "\n" },
-    { insert: "Final paragraph with " },
-    { insert: "inline code", attributes: { code: true } },
-    { insert: ".\n" }
+    { insert: "This final paragraph wraps up our discussion with " },
+    { insert: "inline code examples", attributes: { code: true } },
+    { insert: " and concludes the article with sufficient content to meet all validation requirements.\n" }
   ]
 };
 
@@ -57,7 +59,7 @@ export const MIXED_FORMATTING_DELTA = {
   ]
 };
 
-export const IMAGE_DELTA = {
+export const IMAGE_DELTA: QuillDelta = {
   ops: [
     { insert: "Here's an image:\n" },
     { insert: { image: "https://example.com/image.jpg" }, attributes: { width: 600, alt: "Test image" } },

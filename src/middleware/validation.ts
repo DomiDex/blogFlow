@@ -69,27 +69,30 @@ export function validateFormData(options: ValidationOptions = {}) {
       }
 
       // Preprocess form data to fix common serialization issues
-      if (body && typeof body === 'object' && body.articleContent && body.articleContent.ops) {
-        // Convert ops from object to array if needed (happens with some JSON serialization)
-        if (!Array.isArray(body.articleContent.ops) && typeof body.articleContent.ops === 'object') {
-          const opsObj = body.articleContent.ops as Record<string, unknown>;
-          const opsArray = [];
-          
-          // Convert numeric keys to array
-          const keys = Object.keys(opsObj).sort((a, b) => parseInt(a) - parseInt(b));
-          for (const key of keys) {
-            if (!isNaN(parseInt(key))) {
-              opsArray.push(opsObj[key]);
+      if (body && typeof body === 'object' && 'articleContent' in body) {
+        const bodyTyped = body as any;
+        if (bodyTyped.articleContent && bodyTyped.articleContent.ops) {
+          // Convert ops from object to array if needed (happens with some JSON serialization)
+          if (!Array.isArray(bodyTyped.articleContent.ops) && typeof bodyTyped.articleContent.ops === 'object') {
+            const opsObj = bodyTyped.articleContent.ops as Record<string, unknown>;
+            const opsArray = [];
+            
+            // Convert numeric keys to array
+            const keys = Object.keys(opsObj).sort((a, b) => parseInt(a) - parseInt(b));
+            for (const key of keys) {
+              if (!isNaN(parseInt(key))) {
+                opsArray.push(opsObj[key]);
+              }
             }
-          }
-          
-          if (opsArray.length > 0) {
-            body.articleContent.ops = opsArray;
+            
+            if (opsArray.length > 0) {
+              bodyTyped.articleContent.ops = opsArray;
             logger.debug("Converted ops object to array", {
               requestId,
               originalType: "object",
               convertedLength: opsArray.length,
             });
+            }
           }
         }
       }
@@ -144,10 +147,12 @@ export function validateFormData(options: ValidationOptions = {}) {
 
       // Additional content validation if enabled
       if (shouldValidateContent && validationResult.data?.articleContent) {
-        const contentValidation = validateContent(validationResult.data.articleContent, {
-          minWords,
-          validateUrls: true,
-        });
+        const articleContent = validationResult.data.articleContent;
+        if (articleContent && articleContent.ops) {
+          const contentValidation = validateContent(articleContent as any, {
+            minWords,
+            validateUrls: true,
+          });
 
         if (!contentValidation.success) {
           const fieldErrors = formatValidationErrors(contentValidation.errors!);
@@ -169,6 +174,7 @@ export function validateFormData(options: ValidationOptions = {}) {
             timestamp: new Date().toISOString(),
             requestId,
           } satisfies ValidationErrorResponse, 400);
+          }
         }
       }
 
@@ -415,7 +421,7 @@ export function validateField<T>(
       return;
     }
 
-    const fieldValue = validatedData[fieldName];
+    const fieldValue = (validatedData as any)[fieldName];
     const result = validator(fieldValue);
 
     if (result === false || typeof result === 'string') {

@@ -43,14 +43,20 @@ console.log(`
 `);
 
 // Use Deno's native HTTP server
-await serve(app.fetch, {
-  port,
-  hostname: "0.0.0.0", // Bind to all interfaces for WSL compatibility
-  onListen({ port, hostname }) {
-    logger.info("Server ready", {
-      hostname,
-      port,
-      url: `http://${hostname}:${port}`,
-    });
-  },
-});
+// Export app for testing
+export { app };
+
+// Start server if not in test mode
+if (import.meta.main) {
+  await serve(app.fetch, {
+    port,
+    hostname: "0.0.0.0", // Bind to all interfaces for WSL compatibility
+    onListen({ port, hostname }) {
+      logger.info("Server ready", {
+        hostname,
+        port,
+        url: `http://${hostname}:${port}`,
+      });
+    },
+  });
+}

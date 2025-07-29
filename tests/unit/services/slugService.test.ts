@@ -40,6 +40,7 @@ describe("SlugService", () => {
   afterEach(() => {
     restore();
     mockWebflowService.clearExistingSlugs();
+    slugService.destroy();
   });
 
   describe("generateUniqueSlug", () => {
@@ -74,7 +75,7 @@ describe("SlugService", () => {
       const result = await slugService.generateUniqueSlug(longTitle, { maxLength: 20 });
       
       assertEquals(result.isValid, true);
-      assertEquals(result.finalSlug?.length <= 20, true);
+      assertEquals((result.finalSlug?.length ?? 0) <= 20, true);
       assertEquals(result.finalSlug, "this-is-a-very-long");
     });
 
@@ -163,7 +164,7 @@ describe("SlugService", () => {
       );
       
       assertEquals(result.isValid, true);
-      assertEquals(result.finalSlug?.length <= 25, true);
+      assertEquals((result.finalSlug?.length ?? 0) <= 25, true);
       assertEquals(result.finalSlug, "this-is-a-long-title-2");
     });
 
@@ -316,7 +317,7 @@ describe("SlugService", () => {
       });
       
       assertEquals(result.isValid, true);
-      assertEquals(result.finalSlug?.length <= 50, true);
+      assertEquals((result.finalSlug?.length ?? 0) <= 50, true);
     });
 
     it("should handle titles with only special characters", async () => {

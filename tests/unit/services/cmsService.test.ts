@@ -320,6 +320,7 @@ class MockCMSService {
         articleTitle: "Test Title",
         metaDescription: "Test description",
         articleContent: { ops: [{ insert: "Test" }] },
+        publishNow: false,
       };
 
       const createResult = await this.createCMSItem(testData, true);

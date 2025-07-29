@@ -7,11 +7,11 @@ import { stub, restore } from "@std/testing/mock";
 
 describe("Logger", () => {
   let logger: Logger;
-  let consoleLogStub: ReturnType<typeof stub>;
-  let consoleErrorStub: ReturnType<typeof stub>;
-  let consoleWarnStub: ReturnType<typeof stub>;
-  let dateNowStub: ReturnType<typeof stub>;
-  let envStub: ReturnType<typeof stub>;
+  let consoleLogStub: any;
+  let consoleErrorStub: any;
+  let consoleWarnStub: any;
+  let dateNowStub: any;
+  let envStub: any;
   
   const mockTimestamp = "2024-01-01T12:00:00.000Z";
   const mockDate = new Date(mockTimestamp);
@@ -34,16 +34,23 @@ describe("Logger", () => {
           default: return undefined;
         }
       }
-    });
+    } as any);
   });
 
   afterEach(() => {
-    restore();
+    // Clean up all stubs
+    if (consoleLogStub) consoleLogStub.restore();
+    if (consoleErrorStub) consoleErrorStub.restore();
+    if (consoleWarnStub) consoleWarnStub.restore();
+    if (dateNowStub) dateNowStub.restore();
+    if (envStub) envStub.restore();
+    restore(); // Clean up any remaining stubs
   });
 
   describe("Log Level Management", () => {
     it("should respect log levels", () => {
       // Set log level to error
+      envStub.restore();
       envStub = stub(Deno, "env", {
         get: (key: string) => {
           switch (key) {
@@ -52,7 +59,7 @@ describe("Logger", () => {
             default: return undefined;
           }
         }
-      });
+      } as any);
       
       const errorLogger = new Logger();
       
@@ -82,6 +89,7 @@ describe("Logger", () => {
 
   describe("Log Formatting", () => {
     it("should format production logs as JSON", () => {
+      envStub.restore();
       envStub = stub(Deno, "env", {
         get: (key: string) => {
           switch (key) {
@@ -90,7 +98,7 @@ describe("Logger", () => {
             default: return undefined;
           }
         }
-      });
+      } as any);
       
       const prodLogger = new Logger();
       prodLogger.info("Test message", { requestId: "123" });
@@ -107,6 +115,7 @@ describe("Logger", () => {
     });
 
     it("should format development logs with colors", () => {
+      envStub.restore();
       envStub = stub(Deno, "env", {
         get: (key: string) => {
           switch (key) {
@@ -115,7 +124,7 @@ describe("Logger", () => {
             default: return undefined;
           }
         }
-      });
+      } as any);
       
       const devLogger = new Logger();
       devLogger.info("Test message");
@@ -202,6 +211,7 @@ describe("Logger", () => {
 
   describe("Error Logging", () => {
     it("should log error with stack trace in development", () => {
+      envStub.restore();
       envStub = stub(Deno, "env", {
         get: (key: string) => {
           switch (key) {
@@ -210,7 +220,7 @@ describe("Logger", () => {
             default: return undefined;
           }
         }
-      });
+      } as any);
       
       const devLogger = new Logger();
       const error = new Error("Test error");
@@ -226,6 +236,7 @@ describe("Logger", () => {
     });
 
     it("should include error in JSON format for production", () => {
+      envStub.restore();
       envStub = stub(Deno, "env", {
         get: (key: string) => {
           switch (key) {
@@ -234,7 +245,7 @@ describe("Logger", () => {
             default: return undefined;
           }
         }
-      });
+      } as any);
       
       const prodLogger = new Logger();
       const error = new Error("Test error");
@@ -343,9 +354,9 @@ describe("Logger", () => {
     });
 
     it("should handle hostname errors gracefully", () => {
-      const hostnameStub = stub(Deno, "hostname", () => {
+      const hostnameStub = stub(Deno, "hostname", (() => {
         throw new Error("Hostname not available");
-      });
+      }) as any);
       
       logger = new Logger();
       logger.info("Test message");
@@ -356,6 +367,7 @@ describe("Logger", () => {
     });
 
     it("should default to info level if LOG_LEVEL is invalid", () => {
+      envStub.restore();
       envStub = stub(Deno, "env", {
         get: (key: string) => {
           switch (key) {
@@ -364,7 +376,7 @@ describe("Logger", () => {
             default: return undefined;
           }
         }
-      });
+      } as any);
       
       const invalidLogger = new Logger();
       

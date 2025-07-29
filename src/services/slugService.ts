@@ -30,6 +30,7 @@ export class SlugService {
   private slugCache = new Map<string, SlugCacheEntry>();
   private readonly cacheTimeout = 5 * 60 * 1000; // 5 minutes
   private readonly maxCacheSize = 1000;
+  private cleanupInterval?: number;
 
   // Reserved slugs that cannot be used
   private readonly reservedSlugs = new Set([
@@ -48,7 +49,7 @@ export class SlugService {
     this.webflowService = webflowService;
     
     // Clean up cache periodically
-    setInterval(() => this.cleanupCache(), this.cacheTimeout);
+    this.cleanupInterval = setInterval(() => this.cleanupCache(), this.cacheTimeout);
   }
 
   /**
@@ -447,5 +448,16 @@ export class SlugService {
   clearCache(): void {
     this.slugCache.clear();
     logger.debug("Slug cache cleared");
+  }
+
+  /**
+   * Clean up resources (useful for testing)
+   */
+  destroy(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = undefined;
+    }
+    this.clearCache();
   }
 }

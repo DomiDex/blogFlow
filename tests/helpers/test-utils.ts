@@ -56,7 +56,7 @@ export async function assertAsyncThrows(
     throw new Error("Expected function to throw");
   } catch (error) {
     if (errorClass && !(error instanceof errorClass)) {
-      throw new Error(`Expected ${errorClass.name} but got ${error.constructor.name}`);
+      throw new Error(`Expected ${errorClass.name} but got ${(error as any).constructor.name}`);
     }
     if (msgIncludes && error instanceof Error && !error.message.includes(msgIncludes)) {
       throw new Error(`Expected error message to include "${msgIncludes}" but got "${error.message}"`);
@@ -100,7 +100,7 @@ export function assertDeepEquals<T>(actual: T, expected: T, message?: string): v
     assertEquals(actual, expected);
   } catch (error) {
     if (message) {
-      throw new Error(`${message}\n${error.message}`);
+      throw new Error(`${message}\n${(error as Error).message}`);
     }
     throw error;
   }

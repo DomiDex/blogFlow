@@ -16,7 +16,7 @@ try {
   if (error instanceof Deno.errors.NotFound) {
     console.log("ℹ️  No existing lockfile found");
   } else {
-    console.error("❌ Error removing lockfile:", error.message);
+    console.error("❌ Error removing lockfile:", (error as Error).message);
   }
 }
 

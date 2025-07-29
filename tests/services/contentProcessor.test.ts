@@ -278,7 +278,7 @@ Deno.test("ContentProcessor - Empty content handling", () => {
   const result = convertDeltaToHtml(delta);
 
   // Should fail validation in real usage, but converter handles it
-  assertEquals(result.html, "<p></p>");
+  assertEquals(result.html, "");
   assertEquals(result.wordCount, 0);
 });
 

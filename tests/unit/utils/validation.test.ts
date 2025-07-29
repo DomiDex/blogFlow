@@ -148,7 +148,7 @@ describe("Validation Utils", () => {
 
       const result = validateFormData(invalidData);
       assertEquals(result.success, false);
-      assertEquals(result.errors.length > 0, true);
+      assertEquals((result.errors?.length ?? 0) > 0, true);
     });
   });
 
@@ -169,8 +169,8 @@ describe("Validation Utils", () => {
 
       const result = validateContentLength(delta, 10);
       assertEquals(result.success, false);
-      assertEquals(result.errors.length, 1);
-      assertEquals(result.errors[0].message.includes("at least 10 words"), true);
+      assertEquals(result.errors?.length, 1);
+      assertEquals(result.errors?.[0]?.message.includes("at least 10 words"), true);
     });
   });
 
@@ -200,7 +200,7 @@ describe("Validation Utils", () => {
 
       const result = validateContentUrls(delta);
       assertEquals(result.success, false);
-      assertEquals(result.errors.length > 0, true);
+      assertEquals((result.errors?.length ?? 0) > 0, true);
     });
   });
 
@@ -210,8 +210,7 @@ describe("Validation Utils", () => {
       
       const result = validateContent(delta, {
         minWords: 10,
-        maxWords: 1000,
-        checkUrls: true,
+        validateUrls: true,
       });
 
       assertEquals(result.success, true);
@@ -224,11 +223,11 @@ describe("Validation Utils", () => {
 
       const result = validateContent(shortDelta, {
         minWords: 10,
-        checkUrls: true,
+        validateUrls: true,
       });
 
       assertEquals(result.success, false);
-      assertEquals(result.errors.length > 0, true);
+      assertEquals((result.errors?.length ?? 0) > 0, true);
     });
 
     it("should validate images and videos", () => {

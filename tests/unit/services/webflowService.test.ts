@@ -210,7 +210,7 @@ describe("WebflowService", () => {
         await service.createCollectionItem({});
         throw new Error("Should have thrown");
       } catch (error) {
-        assertEquals(error.message, "fieldData is required");
+        assertEquals((error as Error).message, "fieldData is required");
       }
     });
 
@@ -241,7 +241,7 @@ describe("WebflowService", () => {
         await service.publishItem("");
         throw new Error("Should have thrown");
       } catch (error) {
-        assertEquals(error.message, "Item ID is required");
+        assertEquals((error as Error).message, "Item ID is required");
       }
     });
   });
@@ -286,7 +286,7 @@ describe("WebflowService", () => {
         await service.getCollectionItem("");
         throw new Error("Should have thrown");
       } catch (error) {
-        assertEquals(error.message, "Item ID is required");
+        assertEquals((error as Error).message, "Item ID is required");
       }
     });
   });
