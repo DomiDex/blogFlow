@@ -70,6 +70,7 @@ export function validateFormData(options: ValidationOptions = {}) {
 
       // Preprocess form data to fix common serialization issues
       if (body && typeof body === 'object' && 'articleContent' in body) {
+        // deno-lint-ignore no-explicit-any
         const bodyTyped = body as any;
         if (bodyTyped.articleContent && bodyTyped.articleContent.ops) {
           // Convert ops from object to array if needed (happens with some JSON serialization)
@@ -149,6 +150,7 @@ export function validateFormData(options: ValidationOptions = {}) {
       if (shouldValidateContent && validationResult.data?.articleContent) {
         const articleContent = validationResult.data.articleContent;
         if (articleContent && articleContent.ops) {
+          // deno-lint-ignore no-explicit-any
           const contentValidation = validateContent(articleContent as any, {
             minWords,
             validateUrls: true,
