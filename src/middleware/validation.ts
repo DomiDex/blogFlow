@@ -336,7 +336,7 @@ export function validateContentLength(options: { minWords?: number; maxWords?: n
 export function validationRateLimit() {
   const requestCounts = new Map<string, { count: number; resetTime: number }>();
   const windowMs = 60000; // 1 minute
-  const maxRequests = 10; // 10 validation requests per minute per IP
+  const maxRequests = 100; // 100 validation requests per minute per IP
 
   return async (c: Context, next: Next) => {
     const requestId = c.get("requestId") as string;

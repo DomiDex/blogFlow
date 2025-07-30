@@ -30,7 +30,7 @@ export const rateLimitConfigs: Record<string, RateLimitConfig> = {
   },
   form: {
     windowMs: 300000,  // 5 minutes
-    maxRequests: 10,    // 10 form submissions per 5 minutes
+    maxRequests: 50,    // 50 form submissions per 5 minutes
     message: "Too many form submissions. Please wait before trying again.",
   },
 };
