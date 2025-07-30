@@ -1,0 +1,232 @@
+<!-- Alternative approach using a button instead of form submit -->
+<!-- This completely bypasses Webflow's form handling -->
+
+<!-- Quill JS -->
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
+
+<script>
+(function() {
+  'use strict';
+  
+  console.log('[BlogFlow] Button approach script loading...');
+  
+  const API_ENDPOINT = 'https://dominiquede-blogflow-62.deno.dev/api/webflow-form';
+  const MIN_WORD_COUNT = 50;
+  
+  function init() {
+    console.log('[BlogFlow] Initializing...');
+    
+    // Find the form
+    const form = document.querySelector('form[data-name="Blog Submission Form"]') || 
+                 document.querySelector('form');
+    
+    if (!form) {
+      console.error('[BlogFlow] No form found');
+      return;
+    }
+    
+    // Find or create submit button
+    let submitBtn = form.querySelector('[type="submit"]');
+    
+    if (submitBtn) {
+      // Replace submit button with a regular button
+      const newBtn = document.createElement('button');
+      newBtn.type = 'button'; // Important: not 'submit'
+      newBtn.className = submitBtn.className;
+      newBtn.textContent = submitBtn.value || 'Submit Article';
+      newBtn.id = 'custom-submit-btn';
+      
+      submitBtn.parentNode.replaceChild(newBtn, submitBtn);
+      submitBtn = newBtn;
+      
+      console.log('[BlogFlow] Replaced submit button with custom button');
+    } else {
+      // Create a new button if none exists
+      submitBtn = document.createElement('button');
+      submitBtn.type = 'button';
+      submitBtn.textContent = 'Submit Article';
+      submitBtn.id = 'custom-submit-btn';
+      submitBtn.className = 'w-button';
+      form.appendChild(submitBtn);
+    }
+    
+    // Initialize Quill
+    let quill = null;
+    const editorEl = document.getElementById('editor');
+    
+    if (editorEl && typeof Quill !== 'undefined') {
+      quill = new Quill('#editor', {
+        theme: 'snow',
+        placeholder: 'Write your article content here...',
+        modules: {
+          toolbar: [
+            [{ 'header': [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline'],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            ['link', 'blockquote'],
+            ['clean']
+          ]
+        }
+      });
+      console.log('[BlogFlow] Quill initialized');
+    }
+    
+    // Add click handler to button
+    submitBtn.addEventListener('click', async function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      console.log('[BlogFlow] Button clicked');
+      
+      const originalText = submitBtn.textContent;
+      
+      try {
+        // Disable button
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Processing...';
+        
+        // Collect form data manually
+        const data = {};
+        
+        // Get all form inputs
+        const inputs = form.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+          if (input.name && !input.name.startsWith('_')) {
+            if (input.type === 'checkbox') {
+              data[input.name] = input.checked;
+            } else if (input.type === 'radio') {
+              if (input.checked) {
+                data[input.name] = input.value;
+              }
+            } else {
+              data[input.name] = input.value;
+            }
+          }
+        });
+        
+        // Add Quill content
+        if (quill) {
+          const delta = quill.getContents();
+          const text = quill.getText().trim();
+          const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+          
+          if (wordCount < MIN_WORD_COUNT) {
+            throw new Error(`Article must be at least ${MIN_WORD_COUNT} words (currently ${wordCount})`);
+          }
+          
+          data.articleContent = delta;
+        }
+        
+        // Process arrays
+        if (data.tags && typeof data.tags === 'string') {
+          data.tags = data.tags.split(',').map(t => t.trim()).filter(Boolean);
+        }
+        
+        if (data.categories && typeof data.categories === 'string') {
+          data.categories = data.categories.split(',').map(c => c.trim()).filter(Boolean);
+        }
+        
+        // Ensure required fields
+        data.authorEmail = data.authorEmail || data.email || '';
+        data.metaDescription = data.metaDescription || data.description || '';
+        
+        // Validate required fields
+        if (!data.authorName) throw new Error('Author name is required');
+        if (!data.articleTitle) throw new Error('Article title is required');
+        if (!data.articleContent) throw new Error('Article content is required');
+        
+        console.log('[BlogFlow] Sending data:', data);
+        
+        // Make API call
+        const response = await fetch(API_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        console.log('[BlogFlow] Response:', result);
+        
+        if (response.ok && result.success) {
+          // Success!
+          form.style.display = 'none';
+          
+          const successDiv = document.createElement('div');
+          successDiv.className = 'w-form-done';
+          successDiv.style.display = 'block';
+          successDiv.innerHTML = `
+            <div>
+              <strong>Thank you! Your article has been submitted successfully.</strong><br>
+              ${result.data && result.data.itemId ? `Article ID: ${result.data.itemId}` : ''}
+            </div>
+          `;
+          
+          form.parentNode.insertBefore(successDiv, form.nextSibling);
+          
+          // Reset form
+          form.reset();
+          if (quill) quill.setText('');
+          
+        } else {
+          throw new Error(result.message || 'Submission failed');
+        }
+        
+      } catch (error) {
+        console.error('[BlogFlow] Error:', error);
+        
+        // Show error
+        let errorDiv = form.parentNode.querySelector('.w-form-fail');
+        if (!errorDiv) {
+          errorDiv = document.createElement('div');
+          errorDiv.className = 'w-form-fail';
+          form.parentNode.insertBefore(errorDiv, form.nextSibling);
+        }
+        
+        errorDiv.style.display = 'block';
+        errorDiv.innerHTML = `<div><strong>Error:</strong> ${error.message}</div>`;
+        
+        // Auto-hide after 10 seconds
+        setTimeout(() => {
+          errorDiv.style.display = 'none';
+        }, 10000);
+        
+      } finally {
+        // Re-enable button
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
+    });
+    
+    // Prevent form submission completely
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('[BlogFlow] Form submit prevented');
+      return false;
+    }, true);
+    
+    form.onsubmit = function() {
+      console.log('[BlogFlow] Form onsubmit prevented');
+      return false;
+    };
+    
+    console.log('[BlogFlow] Setup complete');
+  }
+  
+  // Initialize on multiple events
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    setTimeout(init, 100);
+  }
+  
+  // Also on Webflow ready
+  if (window.Webflow) {
+    window.Webflow.push(init);
+  }
+  
+})();
+</script>

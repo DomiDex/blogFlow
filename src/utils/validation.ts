@@ -8,12 +8,18 @@ import { z } from "zod";
 // Custom validation functions
 const profanityWords = [
   // Basic profanity list - you can expand this
-  "damn", "hell", "shit", "fuck", "bitch", "ass", "crap"
+  "damn",
+  "hell",
+  "shit",
+  "fuck",
+  "bitch",
+  "ass",
+  "crap",
 ];
 
 function containsProfanity(text: string): boolean {
   const lowercaseText = text.toLowerCase();
-  return profanityWords.some(word => lowercaseText.includes(word));
+  return profanityWords.some((word) => lowercaseText.includes(word));
 }
 
 function isValidURL(str: string): boolean {
@@ -26,16 +32,16 @@ function isValidURL(str: string): boolean {
 }
 
 // Custom Zod validators
-const _createNoProfanityString = (field: string) => 
+const _createNoProfanityString = (field: string) =>
   z.string().refine(
     (val) => !containsProfanity(val),
-    { message: `${field} contains inappropriate language` }
+    { message: `${field} contains inappropriate language` },
   );
 
 const urlString = z.string()
   .refine(
     (val) => val === "" || isValidURL(val),
-    { message: "Must be a valid URL" }
+    { message: "Must be a valid URL" },
   );
 
 // Quill.js Delta operation schema
@@ -48,7 +54,7 @@ const quillOpSchema = z.object({
       image: z.string().optional(),
       video: z.string().optional(),
       link: z.string().optional(),
-    }).passthrough()
+    }).passthrough(),
   ]).optional(),
 
   // Operation attributes (formatting)
@@ -82,21 +88,21 @@ const quillOpSchema = z.object({
     // At least one operation type must be present
     return op.insert !== undefined || op.retain !== undefined || op.delete !== undefined;
   },
-  { message: "Invalid Quill operation: must have insert, retain, or delete" }
+  { message: "Invalid Quill operation: must have insert, retain, or delete" },
 );
 
 // Quill.js Delta content schema
 const quillDeltaSchema = z.object({
-  ops: z.array(quillOpSchema).min(1, "Content cannot be empty")
+  ops: z.array(quillOpSchema).min(1, "Content cannot be empty"),
 }).refine(
   (delta) => {
     // Check if there's actual text content (not just formatting operations)
-    const hasTextContent = delta.ops.some(op => 
+    const hasTextContent = delta.ops.some((op) =>
       typeof op.insert === "string" && op.insert.trim().length > 0
     );
     return hasTextContent;
   },
-  { message: "Content must contain actual text, not just formatting" }
+  { message: "Content must contain actual text, not just formatting" },
 );
 
 // Email validation schema
@@ -104,11 +110,11 @@ const emailSchema = z.string()
   .email("Must be a valid email address")
   .max(320, "Email address too long");
 
-// Phone number validation schema  
+// Phone number validation schema
 const phoneSchema = z.string()
   .regex(
     /^[\+]?[1-9][\d]{0,15}$/,
-    "Must be a valid phone number (international format supported)"
+    "Must be a valid phone number (international format supported)",
   );
 
 // Main form data schema
@@ -119,55 +125,41 @@ export const formDataSchema = z.object({
     .max(100, "Author name must be less than 100 characters")
     .regex(
       /^[a-zA-Z\s\-'\.]+$/,
-      "Author name can only contain letters, spaces, hyphens, apostrophes, and periods"
+      "Author name can only contain letters, spaces, hyphens, apostrophes, and periods",
     )
     .refine(
       (val) => !containsProfanity(val),
-      { message: "Author name contains inappropriate language" }
+      { message: "Author name contains inappropriate language" },
     ),
 
   // Author contact (optional)
   authorEmail: emailSchema.optional(),
   authorPhone: phoneSchema.optional(),
 
-  // Article content
+  // Article content - simplified for medical professionals
   articleTitle: z.string()
-    .min(10, "Article title must be at least 10 characters")
-    .max(200, "Article title must be less than 200 characters")
-    .regex(
-      /^[a-zA-Z0-9\s\-_:!?\.,'"()&]+$/,
-      "Article title contains invalid characters"
-    )
-    .refine(
-      (val) => !containsProfanity(val),
-      { message: "Article title contains inappropriate language" }
-    ),
+    .min(5, "Article title must be at least 5 characters")
+    .max(300, "Article title must be less than 300 characters")
+    .transform((val) => val.trim()), // Just trim, allow all characters
 
   metaDescription: z.string()
-    .min(50, "Meta description must be at least 50 characters for SEO")
+    .min(20, "Meta description should be at least 20 characters")
     .max(300, "Meta description must be less than 300 characters")
-    .refine(
-      (val) => val.trim().length >= 50,
-      { message: "Meta description must have at least 50 non-whitespace characters" }
-    )
-    .refine(
-      (val) => !containsProfanity(val),
-      { message: "Meta description contains inappropriate language" }
-    ),
+    .transform((val) => val.trim()), // Simplified validation
 
   // Quill.js Delta content
   articleContent: quillDeltaSchema,
 
   // Optional fields
   publishNow: z.boolean().optional().default(false),
-  
+
   // SEO fields (optional)
   slug: z.string()
     .min(3, "Slug must be at least 3 characters")
     .max(100, "Slug must be less than 100 characters")
     .regex(
       /^[a-z0-9-]+$/,
-      "Slug can only contain lowercase letters, numbers, and hyphens"
+      "Slug can only contain lowercase letters, numbers, and hyphens",
     )
     .optional(),
 
@@ -192,8 +184,8 @@ export const formDataSchema = z.object({
   },
   {
     message: "Publish date must be in the future",
-    path: ["publishAt"]
-  }
+    path: ["publishAt"],
+  },
 );
 
 // Schema for updates (most fields optional)
@@ -218,15 +210,15 @@ export const draftFormDataSchema = z.object({
   articleTitle: z.string().min(1).max(200).optional(),
   metaDescription: z.string().max(300).optional(),
   articleContent: z.object({
-    ops: z.array(quillOpSchema).optional()
+    ops: z.array(quillOpSchema).optional(),
   }).optional(),
   slug: z.string().regex(/^[a-z0-9-]*$/).max(100).optional(),
 }).refine(
   (data) => {
     // At least one field must be present for draft
-    return Object.values(data).some(value => value !== undefined && value !== "");
+    return Object.values(data).some((value) => value !== undefined && value !== "");
   },
-  { message: "At least one field must be provided to save draft" }
+  { message: "At least one field must be provided to save draft" },
 );
 
 // Type inference from schemas
@@ -256,7 +248,7 @@ export interface ValidationError {
 export function validateFormData(data: unknown): ValidationResult<FormData> {
   try {
     const result = formDataSchema.safeParse(data);
-    
+
     if (result.success) {
       return {
         success: true,
@@ -265,11 +257,11 @@ export function validateFormData(data: unknown): ValidationResult<FormData> {
     }
 
     // Format Zod errors into user-friendly format
-    const errors: ValidationError[] = result.error.issues.map(issue => ({
-      field: issue.path.join('.') || 'root',
+    const errors: ValidationError[] = result.error.issues.map((issue) => ({
+      field: issue.path.join(".") || "root",
       message: issue.message,
       code: issue.code,
-      received: 'received' in issue ? issue.received : undefined,
+      received: "received" in issue ? issue.received : undefined,
     }));
 
     return {
@@ -280,9 +272,9 @@ export function validateFormData(data: unknown): ValidationResult<FormData> {
     return {
       success: false,
       errors: [{
-        field: 'root',
-        message: 'Invalid data format',
-        code: 'invalid_type',
+        field: "root",
+        message: "Invalid data format",
+        code: "invalid_type",
       }],
     };
   }
@@ -294,7 +286,7 @@ export function validateFormData(data: unknown): ValidationResult<FormData> {
 export function validateUpdateFormData(data: unknown): ValidationResult<UpdateFormData> {
   try {
     const result = updateFormDataSchema.safeParse(data);
-    
+
     if (result.success) {
       return {
         success: true,
@@ -302,11 +294,11 @@ export function validateUpdateFormData(data: unknown): ValidationResult<UpdateFo
       };
     }
 
-    const errors: ValidationError[] = result.error.issues.map(issue => ({
-      field: issue.path.join('.') || 'root',
+    const errors: ValidationError[] = result.error.issues.map((issue) => ({
+      field: issue.path.join(".") || "root",
       message: issue.message,
       code: issue.code,
-      received: 'received' in issue ? issue.received : undefined,
+      received: "received" in issue ? issue.received : undefined,
     }));
 
     return {
@@ -317,9 +309,9 @@ export function validateUpdateFormData(data: unknown): ValidationResult<UpdateFo
     return {
       success: false,
       errors: [{
-        field: 'root',
-        message: 'Invalid data format',
-        code: 'invalid_type',
+        field: "root",
+        message: "Invalid data format",
+        code: "invalid_type",
       }],
     };
   }
@@ -331,7 +323,7 @@ export function validateUpdateFormData(data: unknown): ValidationResult<UpdateFo
 export function validateDraftFormData(data: unknown): ValidationResult<DraftFormData> {
   try {
     const result = draftFormDataSchema.safeParse(data);
-    
+
     if (result.success) {
       return {
         success: true,
@@ -339,11 +331,11 @@ export function validateDraftFormData(data: unknown): ValidationResult<DraftForm
       };
     }
 
-    const errors: ValidationError[] = result.error.issues.map(issue => ({
-      field: issue.path.join('.') || 'root',
+    const errors: ValidationError[] = result.error.issues.map((issue) => ({
+      field: issue.path.join(".") || "root",
       message: issue.message,
       code: issue.code,
-      received: 'received' in issue ? issue.received : undefined,
+      received: "received" in issue ? issue.received : undefined,
     }));
 
     return {
@@ -354,9 +346,9 @@ export function validateDraftFormData(data: unknown): ValidationResult<DraftForm
     return {
       success: false,
       errors: [{
-        field: 'root',
-        message: 'Invalid data format',
-        code: 'invalid_type',
+        field: "root",
+        message: "Invalid data format",
+        code: "invalid_type",
       }],
     };
   }
@@ -367,25 +359,28 @@ export function validateDraftFormData(data: unknown): ValidationResult<DraftForm
  */
 export function extractTextFromDelta(delta: QuillDelta): string {
   return delta.ops
-    .map(op => typeof op.insert === 'string' ? op.insert : '')
-    .join('')
+    .map((op) => typeof op.insert === "string" ? op.insert : "")
+    .join("")
     .trim();
 }
 
 /**
  * Get minimum content length for validation
  */
-export function validateContentLength(delta: QuillDelta, minWords: number = 50): ValidationResult<QuillDelta> {
+export function validateContentLength(
+  delta: QuillDelta,
+  minWords: number = 50,
+): ValidationResult<QuillDelta> {
   const text = extractTextFromDelta(delta);
-  const wordCount = text.split(/\s+/).filter(word => word.length > 0).length;
-  
+  const wordCount = text.split(/\s+/).filter((word) => word.length > 0).length;
+
   if (wordCount < minWords) {
     return {
       success: false,
       errors: [{
-        field: 'articleContent',
+        field: "articleContent",
         message: `Article must contain at least ${minWords} words. Current: ${wordCount} words`,
-        code: 'too_small',
+        code: "too_small",
       }],
     };
   }
@@ -401,25 +396,25 @@ export function validateContentLength(delta: QuillDelta, minWords: number = 50):
  */
 export function validateContentUrls(delta: QuillDelta): ValidationResult<QuillDelta> {
   const errors: ValidationError[] = [];
-  
+
   delta.ops.forEach((op, index) => {
     // Check link in attributes
     if (op.attributes?.link && !isValidURL(op.attributes.link)) {
       errors.push({
         field: `articleContent.ops[${index}].attributes.link`,
-        message: 'Invalid URL in link',
-        code: 'invalid_url',
+        message: "Invalid URL in link",
+        code: "invalid_url",
         received: op.attributes.link,
       });
     }
 
     // Check embedded URLs
-    if (typeof op.insert === 'object') {
+    if (typeof op.insert === "object") {
       if (op.insert.image && !isValidURL(op.insert.image)) {
         errors.push({
           field: `articleContent.ops[${index}].insert.image`,
-          message: 'Invalid image URL',
-          code: 'invalid_url',
+          message: "Invalid image URL",
+          code: "invalid_url",
           received: op.insert.image,
         });
       }
@@ -427,8 +422,8 @@ export function validateContentUrls(delta: QuillDelta): ValidationResult<QuillDe
       if (op.insert.video && !isValidURL(op.insert.video)) {
         errors.push({
           field: `articleContent.ops[${index}].insert.video`,
-          message: 'Invalid video URL',
-          code: 'invalid_url',
+          message: "Invalid video URL",
+          code: "invalid_url",
           received: op.insert.video,
         });
       }
@@ -462,11 +457,11 @@ export function validateContent(delta: QuillDelta, options: {
   if (!basicValidation.success) {
     return {
       success: false,
-      errors: basicValidation.error.issues.map(issue => ({
-        field: issue.path.join('.') || 'articleContent',
+      errors: basicValidation.error.issues.map((issue) => ({
+        field: issue.path.join(".") || "articleContent",
         message: issue.message,
         code: issue.code,
-        received: 'received' in issue ? issue.received : undefined,
+        received: "received" in issue ? issue.received : undefined,
       })),
     };
   }
@@ -496,14 +491,14 @@ export function validateContent(delta: QuillDelta, options: {
  */
 export function formatValidationErrors(errors: ValidationError[]): Record<string, string[]> {
   const fieldErrors: Record<string, string[]> = {};
-  
+
   for (const error of errors) {
     if (!fieldErrors[error.field]) {
       fieldErrors[error.field] = [];
     }
     fieldErrors[error.field].push(error.message);
   }
-  
+
   return fieldErrors;
 }
 
@@ -511,9 +506,9 @@ export function formatValidationErrors(errors: ValidationError[]): Record<string
  * Get user-friendly validation summary
  */
 export function getValidationSummary(errors: ValidationError[]): string {
-  const fieldCount = new Set(errors.map(e => e.field)).size;
+  const fieldCount = new Set(errors.map((e) => e.field)).size;
   const errorCount = errors.length;
-  
+
   if (errorCount === 1) {
     return `1 validation error in ${errors[0].field}`;
   } else if (fieldCount === 1) {

@@ -2,7 +2,7 @@
 
 import { assertEquals, assertExists, assertThrows } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
-import { WebflowService, createWebflowService } from "@services/webflowService.ts";
+import { createWebflowService, WebflowService } from "@services/webflowService.ts";
 
 // Mock WebflowService for testing
 class MockWebflowService {
@@ -179,7 +179,7 @@ describe("WebflowService", () => {
       // This is simplified - real errors would be thrown by the actual service
       const service = new MockWebflowService(mockConfig);
       const result = await service.getCollectionItems();
-      
+
       // Just verify the method doesn't throw
       assertExists(result);
     });
@@ -188,7 +188,7 @@ describe("WebflowService", () => {
   describe("createCollectionItem", () => {
     it("should create item successfully", async () => {
       const service = new MockWebflowService(mockConfig);
-      
+
       const createRequest = {
         fieldData: {
           name: "New Item",
@@ -205,7 +205,7 @@ describe("WebflowService", () => {
 
     it("should throw error if fieldData is missing", async () => {
       const service = new MockWebflowService(mockConfig);
-      
+
       try {
         await service.createCollectionItem({});
         throw new Error("Should have thrown");
@@ -217,11 +217,11 @@ describe("WebflowService", () => {
     it("should handle validation errors", async () => {
       // Simplified - in real service this would throw validation error
       const service = new MockWebflowService(mockConfig);
-      
+
       const result = await service.createCollectionItem({
         fieldData: { name: "Test", slug: "existing-slug" },
       });
-      
+
       assertExists(result);
     });
   });
@@ -229,14 +229,14 @@ describe("WebflowService", () => {
   describe("publishItem", () => {
     it("should publish item successfully", async () => {
       const service = new MockWebflowService(mockConfig);
-      
+
       await service.publishItem("item-123");
       // No error means success
     });
 
     it("should handle publish errors", async () => {
       const service = new MockWebflowService(mockConfig);
-      
+
       try {
         await service.publishItem("");
         throw new Error("Should have thrown");
@@ -281,7 +281,7 @@ describe("WebflowService", () => {
 
     it("should handle not found error", async () => {
       const service = new MockWebflowService(mockConfig);
-      
+
       try {
         await service.getCollectionItem("");
         throw new Error("Should have thrown");
@@ -294,7 +294,7 @@ describe("WebflowService", () => {
   describe("updateCollectionItem", () => {
     it("should update item successfully", async () => {
       const service = new MockWebflowService(mockConfig);
-      
+
       const result = await service.updateCollectionItem("item-123", {
         fieldData: { name: "Updated Item" },
       });
@@ -325,42 +325,42 @@ describe("WebflowService", () => {
       // Simplified test - real service would throw rate limit error
       const service = new MockWebflowService(mockConfig);
       const result = await service.getCollectionItems();
-      
+
       assertExists(result);
     });
 
     it("should handle server errors", async () => {
       const service = new MockWebflowService(mockConfig);
       const result = await service.getCollectionItems();
-      
+
       assertExists(result);
     });
 
     it("should handle network errors", async () => {
       const service = new MockWebflowService(mockConfig);
       const result = await service.getCollectionItems();
-      
+
       assertExists(result);
     });
 
     it("should handle timeout", async () => {
       const service = new MockWebflowService(mockConfig);
       const result = await service.getCollectionItems();
-      
+
       assertExists(result);
     });
 
     it("should handle non-JSON responses", async () => {
       const service = new MockWebflowService(mockConfig);
       const result = await service.getCollectionItems();
-      
+
       assertExists(result);
     });
 
     it("should handle malformed JSON error responses", async () => {
       const service = new MockWebflowService(mockConfig);
       const result = await service.getCollectionItems();
-      
+
       assertExists(result);
     });
   });
@@ -437,7 +437,7 @@ describe("WebflowService", () => {
       assertThrows(
         () => createWebflowService(),
         Error,
-        "WEBFLOW_API_TOKEN"
+        "WEBFLOW_API_TOKEN",
       );
 
       // Restore env
@@ -464,7 +464,7 @@ describe("WebflowService", () => {
       assertThrows(
         () => createWebflowService(),
         Error,
-        "WEBFLOW_SITE_ID"
+        "WEBFLOW_SITE_ID",
       );
 
       // Restore env
@@ -491,7 +491,7 @@ describe("WebflowService", () => {
       assertThrows(
         () => createWebflowService(),
         Error,
-        "WEBFLOW_COLLECTION_ID"
+        "WEBFLOW_COLLECTION_ID",
       );
 
       // Restore env
@@ -510,7 +510,7 @@ describe("WebflowService", () => {
       // This is tested implicitly by other tests
       const service = new MockWebflowService(mockConfig);
       const result = await service.getCollectionItems();
-      
+
       assertExists(result);
     });
 
@@ -519,7 +519,7 @@ describe("WebflowService", () => {
       const result = await service.createCollectionItem({
         fieldData: { name: "Test" },
       });
-      
+
       assertExists(result);
     });
   });

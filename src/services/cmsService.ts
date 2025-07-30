@@ -63,7 +63,7 @@ export class CMSService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      
+
       logger.error("Failed to create CMS item", {
         title: formData.articleTitle,
         error: new Error(errorMessage),
@@ -83,20 +83,20 @@ export class CMSService {
     try {
       // First create as draft
       const createResult = await this.createCMSItem(formData, true);
-      
+
       if (!createResult.success || !createResult.item) {
         return createResult;
       }
 
       // Then publish it
       const publishResult = await this.publishCMSItem(createResult.item.id);
-      
+
       if (!publishResult.success) {
         logger.warn("Item created but publishing failed", {
           itemId: createResult.item.id,
           publishError: publishResult.error,
         });
-        
+
         return {
           success: false,
           item: createResult.item,
@@ -116,7 +116,7 @@ export class CMSService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      
+
       logger.error("Failed to create and publish CMS item", {
         title: formData.articleTitle,
         error: new Error(errorMessage),
@@ -146,7 +146,7 @@ export class CMSService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      
+
       logger.error("Failed to publish CMS item", {
         itemId,
         error: new Error(errorMessage),
@@ -194,7 +194,7 @@ export class CMSService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      
+
       logger.error("Failed to update CMS item", {
         itemId,
         title: formData.articleTitle,
@@ -214,7 +214,7 @@ export class CMSService {
   async checkSlugAvailability(slug: string): Promise<{ available: boolean; itemId?: string }> {
     try {
       const result = await this.webflowService.checkSlugExists(slug);
-      
+
       return {
         available: !result.exists,
         itemId: result.itemId,
@@ -224,7 +224,7 @@ export class CMSService {
         slug,
         error: error instanceof Error ? error : new Error(String(error)),
       });
-      
+
       // On error, assume slug is not available to be safe
       return { available: false };
     }
@@ -261,7 +261,7 @@ export class CMSService {
   async getCMSItem(itemId: string): Promise<WebflowCollectionItem> {
     try {
       const item = await this.webflowService.getCollectionItem(itemId);
-      
+
       logger.debug("Retrieved CMS item", {
         itemId,
         title: item.fieldData.name,
@@ -281,20 +281,21 @@ export class CMSService {
    * Map form data to Webflow field structure
    */
   private async mapFormDataToWebflowFields(formData: FormData): Promise<Partial<WebflowFieldData>> {
-
     // Convert Quill Delta to HTML
     logger.debug("Converting Quill Delta to HTML", {
       hasOps: !!formData.articleContent?.ops,
-      opsType: Array.isArray(formData.articleContent?.ops) ? 'array' : typeof formData.articleContent?.ops,
+      opsType: Array.isArray(formData.articleContent?.ops)
+        ? "array"
+        : typeof formData.articleContent?.ops,
       opsLength: formData.articleContent?.ops ? Object.keys(formData.articleContent.ops).length : 0,
     });
-    
+
     const conversionResult = await convertDeltaToHtml(formData.articleContent);
     if (conversionResult.errors.length > 0) {
       throw new Error(`Failed to convert content: ${conversionResult.errors.join(", ")}`);
     }
     const htmlContent = conversionResult.html;
-    
+
     logger.debug("HTML conversion result", {
       htmlLength: htmlContent.length,
       htmlPreview: htmlContent.substring(0, 100),
@@ -346,7 +347,6 @@ export class CMSService {
       "published-on": formData.publishNow ? metadata.publishedOn : undefined,
     };
   }
-
 
   /**
    * Test CMS operations

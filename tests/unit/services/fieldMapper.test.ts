@@ -1,13 +1,13 @@
 import { assertEquals, assertThrows } from "@std/testing/asserts";
 import {
-  mapToWebflowFields,
-  transformFieldValue,
   createPartialUpdate,
   getFieldMapping,
   isValidWebflowField,
+  mapToWebflowFields,
   sanitizeFieldData,
-  type WebflowFieldData,
+  transformFieldValue,
   type WebflowCmsItem,
+  type WebflowFieldData,
 } from "@/services/fieldMapper.ts";
 import type { ArticleMetadata } from "@/services/metadataGenerator.ts";
 import type { FormData } from "@/utils/validation.ts";
@@ -54,7 +54,7 @@ Deno.test("mapToWebflowFields - basic mapping", () => {
 Deno.test("mapToWebflowFields - draft article", () => {
   const draftFormData = { ...mockFormData, publishNow: false };
   const draftMetadata = { ...mockMetadata, publishedOn: undefined };
-  
+
   const result = mapToWebflowFields(draftFormData, draftMetadata, mockHtmlContent);
 
   assertEquals(result.fieldData._draft, true);
@@ -98,10 +98,10 @@ Deno.test("mapToWebflowFields - update mode", () => {
 
   // Should include isDraft for updates
   assertEquals(result.isDraft, false);
-  
+
   // Should not include created-on for updates
   assertEquals(result.fieldData["created-on"], undefined);
-  
+
   // Should include updated-on
   assertEquals(result.fieldData["updated-on"], mockMetadata.updatedOn);
 });
@@ -113,7 +113,7 @@ Deno.test("mapToWebflowFields - field length validation", () => {
   assertThrows(
     () => mapToWebflowFields(formDataWithLongTitle, mockMetadata, mockHtmlContent),
     ValidationError,
-    "exceeds maximum length"
+    "exceeds maximum length",
   );
 });
 
@@ -129,7 +129,7 @@ Deno.test("mapToWebflowFields - required field validation", () => {
   assertThrows(
     () => mapToWebflowFields(incompleteFormData, mockMetadata, mockHtmlContent),
     ValidationError,
-    "Missing required fields"
+    "Missing required fields",
   );
 });
 
@@ -159,7 +159,7 @@ Deno.test("transformFieldValue - date fields", () => {
   const date = new Date("2024-01-01T00:00:00.000Z");
   assertEquals(transformFieldValue(date, "created-on"), "2024-01-01T00:00:00.000Z");
   assertEquals(transformFieldValue("2024-01-01", "updated-on"), "2024-01-01T00:00:00.000Z");
-  
+
   // Invalid date should return current date
   const result = transformFieldValue("invalid", "published-on");
   assertEquals(typeof result, "string");
@@ -284,7 +284,7 @@ Deno.test("mapToWebflowFields - without optional fields", () => {
   // Required fields should be present
   assertEquals(result.fieldData.name, "Test Article Title");
   assertEquals(result.fieldData["author-name"], "John Doe");
-  
+
   // Optional fields should not be present
   assertEquals(result.fieldData["author-email"], undefined);
   assertEquals(result.fieldData["author-phone"], undefined);
@@ -311,7 +311,7 @@ Deno.test("Field mapping completeness", () => {
     assertEquals(
       mappedFields.includes(field) || field === "_archived" || field === "_draft",
       true,
-      `Required field '${field}' not found in mapping`
+      `Required field '${field}' not found in mapping`,
     );
   }
 });

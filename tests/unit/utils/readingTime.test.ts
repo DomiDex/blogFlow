@@ -1,12 +1,12 @@
 import { assertEquals, assertExists } from "@std/testing/asserts";
 import {
-  calculateReadingTime,
-  calculatePlainTextReadingTime,
   analyzeContent,
+  calculatePlainTextReadingTime,
+  calculateReadingTime,
   countWords,
+  ELEMENT_TIMES,
   formatReadingTime,
   READING_SPEEDS,
-  ELEMENT_TIMES,
 } from "@/utils/readingTime.ts";
 
 // Test data
@@ -99,7 +99,7 @@ Deno.test("formatReadingTime - various durations", () => {
 Deno.test("calculatePlainTextReadingTime - basic calculation", () => {
   const text = "Lorem ipsum ".repeat(238); // 476 words, ~2 minutes at 238 WPM
   const result = calculatePlainTextReadingTime(text);
-  
+
   assertEquals(result.minutes, 2);
   assertEquals(result.time, "2 min read");
   assertEquals(result.words, 476);
@@ -109,21 +109,21 @@ Deno.test("calculatePlainTextReadingTime - basic calculation", () => {
 Deno.test("calculatePlainTextReadingTime - custom WPM", () => {
   const text = "word ".repeat(200); // 200 words
   const result = calculatePlainTextReadingTime(text, 100); // 100 WPM
-  
+
   assertEquals(result.minutes, 2);
   assertEquals(result.time, "2 min read");
 });
 
 Deno.test("calculatePlainTextReadingTime - minimum time", () => {
   const result = calculatePlainTextReadingTime("Short text");
-  
+
   assertEquals(result.minutes, 1);
   assertEquals(result.time, "1 min read");
 });
 
 Deno.test("analyzeContent - simple HTML", () => {
   const analysis = analyzeContent(simpleHtml);
-  
+
   assertExists(analysis);
   assertEquals(analysis.complexity, "simple");
   assertEquals(analysis.imageCount, 0);
@@ -135,7 +135,7 @@ Deno.test("analyzeContent - simple HTML", () => {
 
 Deno.test("analyzeContent - technical content", () => {
   const analysis = analyzeContent(technicalHtml);
-  
+
   assertEquals(analysis.complexity, "complex");
   assert(analysis.technicalWords > 0);
   assert(analysis.technicalWords < analysis.totalWords);
@@ -143,7 +143,7 @@ Deno.test("analyzeContent - technical content", () => {
 
 Deno.test("analyzeContent - code blocks", () => {
   const analysis = analyzeContent(codeHtml);
-  
+
   assertEquals(analysis.codeBlockCount, 1);
   assert(analysis.codeWords > 0);
   assert(["moderate", "complex"].includes(analysis.complexity));
@@ -151,14 +151,14 @@ Deno.test("analyzeContent - code blocks", () => {
 
 Deno.test("analyzeContent - lists", () => {
   const analysis = analyzeContent(listHtml);
-  
+
   assert(analysis.listWords > 0);
   assertEquals(analysis.listWords, 4); // 4 list items
 });
 
 Deno.test("analyzeContent - complex content", () => {
   const analysis = analyzeContent(complexHtml);
-  
+
   assertEquals(analysis.complexity, "complex");
   assertEquals(analysis.imageCount, 2);
   assertEquals(analysis.tableCount, 1);
@@ -169,7 +169,7 @@ Deno.test("analyzeContent - complex content", () => {
 
 Deno.test("calculateReadingTime - simple content", () => {
   const result = calculateReadingTime(simpleHtml);
-  
+
   assertExists(result);
   assertEquals(result.minutes, 1); // Short content, minimum 1 minute
   assertEquals(result.time, "1 min read");
@@ -183,16 +183,16 @@ Deno.test("calculateReadingTime - with images", () => {
     <img src="image2.jpg">
     <img src="image3.jpg">
   `;
-  
+
   const result = calculateReadingTime(htmlWithImages);
-  
+
   // 100 words (~0.42 min) + 3 images (36 seconds = 0.6 min) = ~1 min
   assert(result.minutes >= 1);
 });
 
 Deno.test("calculateReadingTime - with code blocks", () => {
   const result = calculateReadingTime(codeHtml);
-  
+
   // Code reads slower than regular text
   assert(result.minutes >= 1);
   assertExists(result.analysis);
@@ -201,7 +201,7 @@ Deno.test("calculateReadingTime - with code blocks", () => {
 
 Deno.test("calculateReadingTime - complex content timing", () => {
   const result = calculateReadingTime(complexHtml);
-  
+
   // Complex content with images, tables, code, and math should take longer
   assert(result.minutes >= 2);
   assertEquals(result.analysis.complexity, "complex");
@@ -209,12 +209,12 @@ Deno.test("calculateReadingTime - complex content timing", () => {
 
 Deno.test("calculateReadingTime - custom options", () => {
   const text = `<p>${"word ".repeat(200)}</p>`;
-  
+
   const result = calculateReadingTime(text, {
     wordsPerMinute: 100,
     minimumTime: 3,
   });
-  
+
   // 200 words at 100 WPM = 2 minutes, but minimum is 3
   assertEquals(result.minutes, 3);
 });
@@ -222,7 +222,7 @@ Deno.test("calculateReadingTime - custom options", () => {
 Deno.test("calculateReadingTime - error handling", () => {
   // Invalid HTML should still return a result
   const result = calculateReadingTime("<p>Invalid <strong>HTML");
-  
+
   assertExists(result);
   assert(result.minutes >= 1);
   assert(result.words >= 0);
@@ -230,7 +230,7 @@ Deno.test("calculateReadingTime - error handling", () => {
 
 Deno.test("calculateReadingTime - empty content", () => {
   const result = calculateReadingTime("");
-  
+
   assertEquals(result.minutes, 1);
   assertEquals(result.time, "1 min read");
   assertEquals(result.words, 0);
@@ -238,7 +238,7 @@ Deno.test("calculateReadingTime - empty content", () => {
 
 Deno.test("calculateReadingTime - without analysis", () => {
   const result = calculateReadingTime(simpleHtml, { includeAnalysis: false });
-  
+
   assertExists(result);
   assertExists(result.minutes);
   assertExists(result.time);
@@ -267,9 +267,9 @@ Deno.test("calculateReadingTime - long article", () => {
     <img src="diagram.png">
     <table><tr><td>Data</td></tr></table>
   `;
-  
+
   const result = calculateReadingTime(longArticle);
-  
+
   // Should be several minutes for this long content
   assert(result.minutes >= 5);
   assert(result.analysis.totalWords > 500);

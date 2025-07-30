@@ -26,6 +26,9 @@ const getAllowedOrigins = (): string[] => {
 // Create a function to validate origins with wildcard support
 const createOriginValidator = (allowedOrigins: string[]) => {
   return (origin: string): string | null => {
+    // Log the incoming origin for debugging
+    console.log(`[CORS] Checking origin: ${origin || "no-origin"}`);
+
     // Allow requests with no origin (non-browser requests like Postman)
     if (!origin) {
       return isDevelopment ? "*" : null;
@@ -33,6 +36,7 @@ const createOriginValidator = (allowedOrigins: string[]) => {
 
     // Check exact matches first
     if (allowedOrigins.includes(origin)) {
+      console.log(`[CORS] Origin allowed (exact match): ${origin}`);
       return origin;
     }
 
@@ -48,8 +52,16 @@ const createOriginValidator = (allowedOrigins: string[]) => {
         .replace(/\*/g, ".*");
       const regex = new RegExp(`^${regexPattern}$`);
 
-      return regex.test(origin);
+      const matches = regex.test(origin);
+      if (matches) {
+        console.log(`[CORS] Origin allowed (pattern match): ${origin} matches ${pattern}`);
+      }
+      return matches;
     });
+
+    if (!isAllowed) {
+      console.log(`[CORS] Origin rejected: ${origin}. Allowed origins:`, allowedOrigins);
+    }
 
     return isAllowed ? origin : null;
   };

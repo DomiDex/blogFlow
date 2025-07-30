@@ -8,7 +8,7 @@ import type { Variables } from "@app-types";
 export function registerRoutes(app: Hono<{ Variables: Variables }>): void {
   // Security routes (security.txt, CSP reporting, etc.)
   app.route("/", securityRoutes);
-  
+
   // Health check routes at root level
   app.route("/", healthRoutes);
 

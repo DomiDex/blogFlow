@@ -11,19 +11,49 @@ const purify = DOMPurify(window);
  */
 const ALLOWED_TAGS = [
   // Text formatting
-  "p", "br", "strong", "em", "u", "s", "mark", "small", "sub", "sup",
+  "p",
+  "br",
+  "strong",
+  "em",
+  "u",
+  "s",
+  "mark",
+  "small",
+  "sub",
+  "sup",
   // Headings
-  "h1", "h2", "h3", "h4", "h5", "h6",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
   // Lists
-  "ul", "ol", "li",
+  "ul",
+  "ol",
+  "li",
   // Quotes and code
-  "blockquote", "pre", "code", "kbd",
+  "blockquote",
+  "pre",
+  "code",
+  "kbd",
   // Links and media
-  "a", "img",
+  "a",
+  "img",
   // Semantic elements
-  "div", "span", "section", "article", "aside", "nav",
+  "div",
+  "span",
+  "section",
+  "article",
+  "aside",
+  "nav",
   // Tables (if needed for articles)
-  "table", "thead", "tbody", "tr", "th", "td",
+  "table",
+  "thead",
+  "tbody",
+  "tr",
+  "th",
+  "td",
 ];
 
 /**
@@ -74,12 +104,12 @@ function isValidImageUrl(url: string): boolean {
     }
     // Check file extension
     const pathname = parsed.pathname.toLowerCase();
-    return ALLOWED_IMAGE_EXTENSIONS.some(ext => pathname.endsWith(ext));
+    return ALLOWED_IMAGE_EXTENSIONS.some((ext) => pathname.endsWith(ext));
   } catch {
     // For relative URLs, just check extension
     const lowerUrl = url.toLowerCase();
-    return ALLOWED_IMAGE_EXTENSIONS.some(ext => lowerUrl.endsWith(ext)) &&
-           !url.startsWith("javascript:") && !url.startsWith("data:");
+    return ALLOWED_IMAGE_EXTENSIONS.some((ext) => lowerUrl.endsWith(ext)) &&
+      !url.startsWith("javascript:") && !url.startsWith("data:");
   }
 }
 
@@ -92,7 +122,7 @@ for (const [tag, attrs] of Object.entries(ALLOWED_ATTR)) {
   if (tag === "*") {
     allowedAttrs.push(...attrs);
   } else {
-    attrs.forEach(attr => allowedAttrs.push(attr));
+    attrs.forEach((attr) => allowedAttrs.push(attr));
   }
 }
 
@@ -118,7 +148,7 @@ export function sanitizeHtml(html: string): string {
   if (!html || typeof html !== "string") {
     return "";
   }
-  
+
   // Handle whitespace-only strings
   if (!html.trim()) {
     return "";
@@ -186,7 +216,7 @@ export function sanitizeHtml(html: string): string {
     throw new ContentProcessingError(
       "Failed to sanitize HTML content",
       "SANITIZATION_ERROR",
-      { error: error instanceof Error ? error.message : String(error) }
+      { error: error instanceof Error ? error.message : String(error) },
     );
   }
 }
@@ -198,7 +228,7 @@ export function sanitizeUserContent(html: string): string {
   if (!html || typeof html !== "string") {
     return "";
   }
-  
+
   // Handle whitespace-only strings
   if (!html.trim()) {
     return "";
@@ -212,10 +242,21 @@ export function sanitizeUserContent(html: string): string {
   // More restrictive config for user content
   const strictConfig = {
     ALLOWED_TAGS: [
-      "p", "br", "strong", "em", "u", "s",
-      "h2", "h3", "h4", // No h1 for user content
-      "ul", "ol", "li",
-      "blockquote", "pre", "code",
+      "p",
+      "br",
+      "strong",
+      "em",
+      "u",
+      "s",
+      "h2",
+      "h3",
+      "h4", // No h1 for user content
+      "ul",
+      "ol",
+      "li",
+      "blockquote",
+      "pre",
+      "code",
       "a", // No images in user content
     ],
     ALLOWED_ATTR: ["href", "target", "rel", "title", "class", "id", "cite"],
@@ -238,7 +279,7 @@ export function sanitizeUserContent(html: string): string {
     throw new ContentProcessingError(
       "Failed to sanitize user content",
       "SANITIZATION_ERROR",
-      { error: error instanceof Error ? error.message : String(error) }
+      { error: error instanceof Error ? error.message : String(error) },
     );
   }
 }
@@ -274,7 +315,7 @@ export function sanitizeUrl(url: string): string {
     throw new ValidationError(
       "Invalid URL format",
       "url",
-      trimmed
+      trimmed,
     );
   }
 

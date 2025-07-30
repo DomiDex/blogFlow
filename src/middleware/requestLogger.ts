@@ -36,14 +36,14 @@ function getClientIP(c: Context): string {
 // Check if body should be logged
 function shouldLogBody(contentType: string | undefined): boolean {
   if (!contentType) return false;
-  
+
   const loggedTypes = [
     "application/json",
     "application/x-www-form-urlencoded",
     "text/plain",
   ];
-  
-  return loggedTypes.some(type => contentType.includes(type));
+
+  return loggedTypes.some((type) => contentType.includes(type));
 }
 
 // Sanitize headers for logging
@@ -70,7 +70,7 @@ export const requestLogger = (): MiddlewareHandler<{ Variables: Variables }> => 
   return async (c, next) => {
     const start = performance.now();
     const requestId = generateRequestId();
-    
+
     // Attach request ID to context
     c.set("requestId", requestId);
     c.header("X-Request-ID", requestId);
@@ -80,15 +80,22 @@ export const requestLogger = (): MiddlewareHandler<{ Variables: Variables }> => 
     const clientIP = getClientIP(c);
     const userAgent = c.req.header("user-agent") || "unknown";
 
-    // Log incoming request
+    // Log incoming request with CORS debugging
     const requestHeaders: Record<string, string> = {};
     c.req.raw.headers.forEach((value, key) => {
       requestHeaders[key] = value;
     });
+
+    // Add specific CORS debugging
+    const origin = c.req.header("origin");
+    const referer = c.req.header("referer");
+
     logger.info(`Incoming ${method} ${path}`, {
       requestId,
       method,
       path,
+      origin: origin || "no-origin",
+      referer: referer || "no-referer",
       clientIP,
       userAgent,
       headers: sanitizeHeaders(requestHeaders),
@@ -97,7 +104,7 @@ export const requestLogger = (): MiddlewareHandler<{ Variables: Variables }> => 
     // Log request body if applicable
     if (method !== "GET" && method !== "HEAD") {
       const contentType = c.req.header("content-type");
-      
+
       if (shouldLogBody(contentType)) {
         try {
           // Clone the request to avoid consuming the body
@@ -147,11 +154,10 @@ export const requestLogger = (): MiddlewareHandler<{ Variables: Variables }> => 
 
       // Add timing header
       c.header("X-Response-Time", `${duration}ms`);
-
     } catch (error) {
       // Calculate duration even on error
       const duration = Math.round(performance.now() - start);
-      
+
       // Log the error
       logger.error(`Request failed: ${method} ${path}`, {
         requestId,

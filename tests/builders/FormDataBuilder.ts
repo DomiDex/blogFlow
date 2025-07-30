@@ -103,7 +103,16 @@ export class FormDataBuilder {
   // Private helper methods for generating realistic test data
   private generateAuthorName(): string {
     const firstNames = ["John", "Jane", "Alex", "Sarah", "Michael", "Emma", "David", "Lisa"];
-    const lastNames = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis"];
+    const lastNames = [
+      "Smith",
+      "Johnson",
+      "Williams",
+      "Brown",
+      "Jones",
+      "Garcia",
+      "Miller",
+      "Davis",
+    ];
     const first = firstNames[Math.floor(Math.random() * firstNames.length)];
     const last = lastNames[Math.floor(Math.random() * lastNames.length)];
     return `${first} ${last}`;
@@ -120,8 +129,17 @@ export class FormDataBuilder {
       "{topic}: Everything You Need to Know",
       "Why {topic} Matters for Modern Development",
     ];
-    const topics = ["Deno", "TypeScript", "Web Development", "API Design", "Testing", "Performance", "Security", "DevOps"];
-    
+    const topics = [
+      "Deno",
+      "TypeScript",
+      "Web Development",
+      "API Design",
+      "Testing",
+      "Performance",
+      "Security",
+      "DevOps",
+    ];
+
     const template = templates[Math.floor(Math.random() * templates.length)];
     const topic = topics[Math.floor(Math.random() * topics.length)];
     return template.replace("{topic}", topic);

@@ -13,7 +13,7 @@ export abstract class BaseError extends Error {
     code: string,
     statusCode: number,
     isOperational = true,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ) {
     super(message);
     this.name = this.constructor.name;
@@ -48,7 +48,7 @@ export class ValidationError extends BaseError {
     message: string,
     field?: string,
     value?: unknown,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ) {
     super(message, "VALIDATION_ERROR", 400, true, context);
     this.field = field;
@@ -66,14 +66,14 @@ export class WebflowError extends BaseError {
     statusCode: number,
     webflowCode?: string,
     webflowMessage?: string,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ) {
     super(
       message,
       `WEBFLOW_${webflowCode || "ERROR"}`,
       statusCode,
       true,
-      context
+      context,
     );
     this.webflowCode = webflowCode;
     this.webflowMessage = webflowMessage;
@@ -99,9 +99,7 @@ export class NotFoundError extends BaseError {
   public readonly resource?: string;
 
   constructor(resource?: string, message?: string, context?: Record<string, unknown>) {
-    const defaultMessage = resource 
-      ? `${resource} not found`
-      : "Resource not found";
+    const defaultMessage = resource ? `${resource} not found` : "Resource not found";
     super(message || defaultMessage, "NOT_FOUND", 404, true, context);
     this.resource = resource;
   }
@@ -114,7 +112,7 @@ export class ConflictError extends BaseError {
   constructor(
     message: string,
     conflictingResource?: string,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ) {
     super(message, "CONFLICT", 409, true, context);
     this.conflictingResource = conflictingResource;
@@ -134,7 +132,7 @@ export class RateLimitError extends BaseError {
     limit?: number,
     remaining?: number,
     reset?: Date,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ) {
     super(message, "RATE_LIMIT_EXCEEDED", 429, true, context);
     this.retryAfter = retryAfter;
@@ -151,7 +149,7 @@ export class ExternalServiceError extends BaseError {
   constructor(
     service: string,
     message?: string,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ) {
     const defaultMessage = `External service ${service} is unavailable`;
     super(
@@ -159,7 +157,7 @@ export class ExternalServiceError extends BaseError {
       "EXTERNAL_SERVICE_ERROR",
       502,
       true,
-      context
+      context,
     );
     this.service = service;
   }
@@ -172,7 +170,7 @@ export class TimeoutError extends BaseError {
   constructor(
     timeout: number,
     operation?: string,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ) {
     const message = operation
       ? `Operation '${operation}' timed out after ${timeout}ms`
@@ -196,7 +194,7 @@ export class ContentProcessingError extends BaseError {
   constructor(
     message: string,
     stage?: string,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ) {
     super(message, "CONTENT_PROCESSING_ERROR", 422, true, context);
     this.stage = stage;
@@ -239,10 +237,11 @@ export function createWebflowError(
       code?: string;
       details?: unknown;
     };
-  }
+  },
 ): WebflowError {
   const { status, statusText, body } = response;
-  const errorMessage = body?.err || body?.error || body?.message || statusText || "Webflow API error";
+  const errorMessage = body?.err || body?.error || body?.message || statusText ||
+    "Webflow API error";
   const errorCode = body?.code;
 
   return new WebflowError(
@@ -250,13 +249,13 @@ export function createWebflowError(
     status,
     errorCode,
     errorMessage,
-    { details: body?.details }
+    { details: body?.details },
   );
 }
 
 // Error factory for validation errors from Zod or other validators
 export function createValidationError(
-  errors: Array<{ path: string[]; message: string }> | Record<string, string>
+  errors: Array<{ path: string[]; message: string }> | Record<string, string>,
 ): ValidationError {
   if (Array.isArray(errors)) {
     // Handle array of errors (like from Zod)
@@ -266,7 +265,7 @@ export function createValidationError(
         firstError.message,
         firstError.path.join("."),
         undefined,
-        { allErrors: errors }
+        { allErrors: errors },
       );
     }
   } else {
@@ -277,7 +276,7 @@ export function createValidationError(
         errors[firstKey],
         firstKey,
         undefined,
-        { allErrors: errors }
+        { allErrors: errors },
       );
     }
   }

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Webflow CORS</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Webflow CORS Test</h1>
+    
+    <div>
+        <h2>Test Different Origins</h2>
+        <button onclick="testOrigin('https://www.jabali-network.co.uk')">Test jabali-network.co.uk</button>
+        <button onclick="testOrigin('https://preview.webflow.com')">Test preview.webflow.com</button>
+        <button onclick="testOrigin('https://test.webflow.io')">Test *.webflow.io</button>
+        <button onclick="testOrigin(window.location.origin)">Test Current Origin</button>
+    </div>
+    
+    <div>
+        <h2>Test Form Submission</h2>
+        <button onclick="testFormSubmission()">Test POST Request</button>
+    </div>
+    
+    <div id="results"></div>
+    
+    <script>
+        const API_ENDPOINT = 'https://dominiquede-blogflow-62.deno.dev/api/webflow-form';
+        const resultsDiv = document.getElementById('results');
+        
+        async function testOrigin(origin) {
+            addResult(`Testing origin: ${origin}`, 'info');
+            
+            try {
+                // Test OPTIONS (preflight)
+                const optionsResponse = await fetch(API_ENDPOINT, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': origin,
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type',
+                    },
+                });
+                
+                addResult(`OPTIONS Status: ${optionsResponse.status}`, optionsResponse.ok ? 'success' : 'error');
+                addResult(`Allow-Origin: ${optionsResponse.headers.get('Access-Control-Allow-Origin')}`, 'info');
+                addResult(`Allow-Methods: ${optionsResponse.headers.get('Access-Control-Allow-Methods')}`, 'info');
+                
+            } catch (error) {
+                addResult(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testFormSubmission() {
+            addResult('Testing form submission...', 'info');
+            
+            const testData = {
+                articleTitle: "Test Article from CORS Test",
+                authorName: "Test Author",
+                authorEmail: "test@example.com",
+                articleContent: {
+                    ops: [
+                        { insert: "This is a test article to verify CORS is working correctly. " },
+                        { insert: "It contains enough words to pass validation. " },
+                        { insert: "The quick brown fox jumps over the lazy dog. " },
+                        { insert: "This sentence is here to ensure we have at least 50 words in total. " },
+                        { insert: "Adding more content to meet the minimum word requirement for article submission. " }
+                    ]
+                },
+                metaDescription: "Test article for CORS verification",
+                tags: ["test", "cors"],
+                categories: ["Testing"],
+                publishNow: false
+            };
+            
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const result = await response.json();
+                
+                addResult(`POST Status: ${response.status}`, response.ok ? 'success' : 'error');
+                addResult(`Response: ${JSON.stringify(result, null, 2)}`, response.ok ? 'success' : 'error');
+                
+            } catch (error) {
+                addResult(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            
+            if (message.includes('{')) {
+                // Format JSON
+                const pre = document.createElement('pre');
+                pre.textContent = message;
+                div.appendChild(pre);
+            } else {
+                div.textContent = message;
+            }
+            
+            resultsDiv.appendChild(div);
+            
+            // Auto-scroll to bottom
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+        
+        // Test current origin on load
+        window.addEventListener('load', () => {
+            addResult(`Current page origin: ${window.location.origin}`, 'info');
+        });
+    </script>
+</body>
+</html>

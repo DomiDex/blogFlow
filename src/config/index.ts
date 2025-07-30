@@ -12,7 +12,7 @@ try {
       allowEmptyValues: true,
     });
   }
-} catch (error) {
+} catch (_error) {
   // If .env file doesn't exist, that's okay - we'll use system env vars
   console.log("No .env file found, using system environment variables");
 }

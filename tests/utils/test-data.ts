@@ -35,17 +35,17 @@ export function generateTestId(prefix: string = "test"): string {
  */
 export function makeUnique<T extends Record<string, any>>(
   data: T,
-  fields: string[] = ["name", "title", "slug"]
+  fields: string[] = ["name", "title", "slug"],
 ): T {
   const uniqueId = generateTestId();
   const result = { ...data } as any;
-  
-  fields.forEach(field => {
+
+  fields.forEach((field) => {
     if (result[field] && typeof result[field] === "string") {
       result[field] = `${result[field]}-${uniqueId}`;
     }
   });
-  
+
   return result as T;
 }
 
@@ -54,9 +54,9 @@ export function makeUnique<T extends Record<string, any>>(
  */
 export function validateRequiredFields(
   data: Record<string, any>,
-  requiredFields: string[]
+  requiredFields: string[],
 ): { valid: boolean; missing: string[] } {
-  const missing = requiredFields.filter(field => !data[field]);
+  const missing = requiredFields.filter((field) => !data[field]);
   return {
     valid: missing.length === 0,
     missing,
@@ -69,16 +69,16 @@ export function validateRequiredFields(
 export function cleanSensitiveData<T extends Record<string, any>>(data: T): T {
   const sensitiveKeys = ["token", "apiKey", "password", "secret", "authorization"];
   const cleaned = { ...data };
-  
+
   const clean = (obj: any): any => {
     if (Array.isArray(obj)) {
       return obj.map(clean);
     }
-    
+
     if (obj && typeof obj === "object") {
       const result: any = {};
       for (const [key, value] of Object.entries(obj)) {
-        if (sensitiveKeys.some(sensitive => key.toLowerCase().includes(sensitive))) {
+        if (sensitiveKeys.some((sensitive) => key.toLowerCase().includes(sensitive))) {
           result[key] = "[REDACTED]";
         } else {
           result[key] = clean(value);
@@ -86,10 +86,10 @@ export function cleanSensitiveData<T extends Record<string, any>>(data: T): T {
       }
       return result;
     }
-    
+
     return obj;
   };
-  
+
   return clean(cleaned);
 }
 
@@ -98,7 +98,7 @@ export function cleanSensitiveData<T extends Record<string, any>>(data: T): T {
  */
 export function withDefaults<T extends Record<string, any>>(
   data: Partial<T>,
-  defaults: T
+  defaults: T,
 ): T {
   return { ...defaults, ...data };
 }
@@ -108,9 +108,9 @@ export function withDefaults<T extends Record<string, any>>(
  */
 export function createVariations<T extends Record<string, any>>(
   base: T,
-  variations: Array<Partial<T>>
+  variations: Array<Partial<T>>,
 ): T[] {
-  return variations.map(variation => ({ ...base, ...variation }));
+  return variations.map((variation) => ({ ...base, ...variation }));
 }
 
 /**
@@ -119,23 +119,23 @@ export function createVariations<T extends Record<string, any>>(
 export function createPaginatedData<T>(
   itemGenerator: (index: number) => T,
   totalItems: number = 100,
-  pageSize: number = 10
+  pageSize: number = 10,
 ): Array<{ page: number; items: T[] }> {
   const pages: Array<{ page: number; items: T[] }> = [];
   const totalPages = Math.ceil(totalItems / pageSize);
-  
+
   for (let page = 1; page <= totalPages; page++) {
     const start = (page - 1) * pageSize;
     const end = Math.min(start + pageSize, totalItems);
     const items: T[] = [];
-    
+
     for (let i = start; i < end; i++) {
       items.push(itemGenerator(i));
     }
-    
+
     pages.push({ page, items });
   }
-  
+
   return pages;
 }
 
@@ -144,13 +144,13 @@ export function createPaginatedData<T>(
  */
 export function assertDataShape(
   actual: any,
-  expected: Record<string, string>
+  expected: Record<string, string>,
 ): void {
   for (const [key, type] of Object.entries(expected)) {
     if (!(key in actual)) {
       throw new Error(`Missing expected key: ${key}`);
     }
-    
+
     const actualType = Array.isArray(actual[key]) ? "array" : typeof actual[key];
     if (actualType !== type) {
       throw new Error(`Type mismatch for ${key}: expected ${type}, got ${actualType}`);
@@ -162,16 +162,16 @@ export function assertDataShape(
  * Create test doubles for external services
  */
 export function createServiceDouble<T extends Record<string, any>>(
-  methods: Array<keyof T>
+  methods: Array<keyof T>,
 ): T {
   const double: any = {};
-  
-  methods.forEach(method => {
+
+  methods.forEach((method) => {
     double[method] = () => {
       throw new Error(`Method ${String(method)} not implemented in test double`);
     };
   });
-  
+
   return double as T;
 }
 
@@ -180,15 +180,15 @@ export function createServiceDouble<T extends Record<string, any>>(
  */
 export class TestDataTracker {
   private items: Array<{ type: string; id: string }> = [];
-  
+
   track(type: string, id: string): void {
     this.items.push({ type, id });
   }
-  
+
   getTrackedItems(): Array<{ type: string; id: string }> {
     return [...this.items];
   }
-  
+
   clear(): void {
     this.items = [];
   }

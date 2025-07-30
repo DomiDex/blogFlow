@@ -1,5 +1,5 @@
 /// <reference lib="deno.ns" />
-import type { MiddlewareHandler, Context } from "@hono/hono";
+import type { Context, MiddlewareHandler } from "@hono/hono";
 import { isDevelopment, isProduction } from "@config/index.ts";
 import { logger } from "@utils/logger.ts";
 import type { Variables } from "@app-types";
@@ -40,7 +40,7 @@ function generateNonce(): string {
 
 // Content Security Policy configuration
 const getCSPDirectives = (nonce?: string): string => {
-  const scriptSrc = nonce 
+  const scriptSrc = nonce
     ? `'self' 'nonce-${nonce}' https://*.webflow.com`
     : "'self' 'unsafe-inline' 'unsafe-eval' https://*.webflow.com";
 
@@ -64,7 +64,9 @@ const getCSPDirectives = (nonce?: string): string => {
 
   // Relax CSP in development
   if (isDevelopment) {
-    baseDirectives.push("connect-src 'self' http://localhost:* ws://localhost:* https://*.webflow.com");
+    baseDirectives.push(
+      "connect-src 'self' http://localhost:* ws://localhost:* https://*.webflow.com",
+    );
   }
 
   // Add report URI if enabled
@@ -92,7 +94,8 @@ export const getSecurityHeaders = (_c?: Context): Record<string, string> => {
     "Referrer-Policy": "strict-origin-when-cross-origin",
 
     // Permissions Policy (formerly Feature Policy)
-    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), accelerometer=(), gyroscope=()",
+    "Permissions-Policy":
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), accelerometer=(), gyroscope=()",
 
     // DNS Prefetch Control
     "X-DNS-Prefetch-Control": "off",
@@ -134,9 +137,11 @@ export const getSecurityHeaders = (_c?: Context): Record<string, string> => {
 };
 
 // Security middleware
-export const securityMiddleware = (options: Partial<SecurityConfig> = {}): MiddlewareHandler<{ Variables: Variables }> => {
+export const securityMiddleware = (
+  options: Partial<SecurityConfig> = {},
+): MiddlewareHandler<{ Variables: Variables }> => {
   const config = { ...defaultSecurityConfig, ...options };
-  
+
   return async (c, next) => {
     // Generate nonce if enabled
     const nonce = config.enableNonce ? generateNonce() : undefined;
@@ -183,8 +188,8 @@ export const validateContentType = (contentType: string | null): boolean => {
 export const sanitizeHeaders = (headers: Headers): Record<string, string> => {
   const sanitized: Record<string, string> = {};
   const sensitiveHeaders = [
-    "authorization", 
-    "cookie", 
+    "authorization",
+    "cookie",
     "x-api-key",
     "x-csrf-token",
     "x-auth-token",
@@ -224,9 +229,10 @@ export const requestValidation = (): MiddlewareHandler<{ Variables: Variables }>
         return c.json(
           {
             error: "Invalid Content-Type",
-            message: "Content-Type must be application/json, application/x-www-form-urlencoded, or multipart/form-data",
+            message:
+              "Content-Type must be application/json, application/x-www-form-urlencoded, or multipart/form-data",
           },
-          415 // Unsupported Media Type
+          415, // Unsupported Media Type
         );
       }
     }
@@ -246,7 +252,7 @@ export const requestValidation = (): MiddlewareHandler<{ Variables: Variables }>
             error: "Payload Too Large",
             message: `Request body must not exceed ${defaultSecurityConfig.maxRequestSize} bytes`,
           },
-          413 // Payload Too Large
+          413, // Payload Too Large
         );
       }
     }
@@ -257,7 +263,9 @@ export const requestValidation = (): MiddlewareHandler<{ Variables: Variables }>
         const body = await c.req.raw.clone().text();
         if (body) {
           // Check for __proto__ or constructor pollution attempts
-          if (body.includes("__proto__") || body.includes("constructor") || body.includes("prototype")) {
+          if (
+            body.includes("__proto__") || body.includes("constructor") || body.includes("prototype")
+          ) {
             logger.error("Potential prototype pollution attempt", {
               requestId,
               path: c.req.path,
@@ -268,7 +276,7 @@ export const requestValidation = (): MiddlewareHandler<{ Variables: Variables }>
                 error: "Invalid JSON",
                 message: "Request contains potentially malicious properties",
               },
-              400
+              400,
             );
           }
         }
@@ -294,7 +302,9 @@ export const validateCSRFToken = (token: string | null, sessionToken: string): b
 };
 
 // API Key validation middleware
-export const apiKeyValidation = (validKeys: Set<string>): MiddlewareHandler<{ Variables: Variables }> => {
+export const apiKeyValidation = (
+  validKeys: Set<string>,
+): MiddlewareHandler<{ Variables: Variables }> => {
   return async (c, next) => {
     const apiKey = c.req.header("x-api-key") || c.req.header("api-key");
     const requestId = c.get("requestId");
@@ -309,7 +319,7 @@ export const apiKeyValidation = (validKeys: Set<string>): MiddlewareHandler<{ Va
           error: "Unauthorized",
           message: "API key is required",
         },
-        401
+        401,
       );
     }
 
@@ -323,7 +333,7 @@ export const apiKeyValidation = (validKeys: Set<string>): MiddlewareHandler<{ Va
           error: "Unauthorized",
           message: "Invalid API key",
         },
-        401
+        401,
       );
     }
 
@@ -337,7 +347,7 @@ export const apiKeyValidation = (validKeys: Set<string>): MiddlewareHandler<{ Va
 export const securityTxtHandler = (): string => {
   const contact = "mailto:security@example.com";
   const expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
-  
+
   return `Contact: ${contact}
 Expires: ${expires}
 Encryption: https://example.com/pgp-key.txt

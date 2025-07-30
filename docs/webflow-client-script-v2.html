@@ -1,0 +1,241 @@
+<!-- Quill JS and Form Handler - Add before </body> -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.min.js"></script>
+
+<script>
+// Enhanced Webflow Form Handler with Better Error Handling
+(function() {
+  'use strict';
+  
+  // Configuration
+  const API_ENDPOINT = 'https://dominiquede-blogflow-62.deno.dev/api/webflow-form';
+  const MIN_WORD_COUNT = 50;
+  
+  // Debug logging
+  function log(...args) {
+    console.log('[BlogFlow]', ...args);
+  }
+  
+  function logError(...args) {
+    console.error('[BlogFlow Error]', ...args);
+  }
+  
+  // Initialize when DOM is ready
+  function init() {
+    log('Initializing...');
+    
+    // Wait for Webflow to be ready
+    if (window.Webflow) {
+      window.Webflow.push(function() {
+        log('Webflow ready');
+        setupFormHandler();
+      });
+    } else {
+      // Fallback if Webflow is not available
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupFormHandler);
+      } else {
+        setupFormHandler();
+      }
+    }
+  }
+  
+  // Setup form handler
+  function setupFormHandler() {
+    log('Setting up form handler');
+    
+    // Find the form
+    const form = document.querySelector('form[data-name="Blog Submission Form"]') || 
+                 document.querySelector('form');
+    
+    if (!form) {
+      logError('No form found on page');
+      return;
+    }
+    
+    log('Form found:', form);
+    
+    // Initialize Quill editor if element exists
+    let quill = null;
+    const editorElement = document.getElementById('editor');
+    
+    if (editorElement && typeof Quill !== 'undefined') {
+      try {
+        quill = new Quill('#editor', {
+          theme: 'snow',
+          placeholder: 'Write your article content here...',
+          modules: {
+            toolbar: [
+              [{ 'header': [1, 2, 3, false] }],
+              ['bold', 'italic', 'underline'],
+              [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+              ['link', 'blockquote'],
+              ['clean']
+            ]
+          }
+        });
+        log('Quill editor initialized');
+      } catch (error) {
+        logError('Failed to initialize Quill:', error);
+      }
+    }
+    
+    // Override form submission
+    form.addEventListener('submit', handleSubmit, true);
+    
+    // Prevent Webflow's default handling
+    form.setAttribute('data-ajax', 'false');
+    
+    // Handle form submission
+    async function handleSubmit(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      log('Form submission intercepted');
+      
+      // Get submit button
+      const submitBtn = form.querySelector('[type="submit"]');
+      const originalText = submitBtn ? submitBtn.value : 'Submit';
+      
+      try {
+        // Disable submit button
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.value = 'Processing...';
+        }
+        
+        // Collect form data
+        const formData = new FormData(form);
+        const data = {};
+        
+        // Convert FormData to object
+        for (const [key, value] of formData.entries()) {
+          // Skip Webflow system fields
+          if (key.startsWith('_') || key === 'submit') continue;
+          data[key] = value;
+        }
+        
+        // Add Quill content if available
+        if (quill) {
+          const delta = quill.getContents();
+          const text = quill.getText().trim();
+          const wordCount = text.split(/\s+/).filter(word => word.length > 0).length;
+          
+          log('Article word count:', wordCount);
+          
+          if (wordCount < MIN_WORD_COUNT) {
+            throw new Error(`Article must be at least ${MIN_WORD_COUNT} words (currently ${wordCount} words)`);
+          }
+          
+          data.articleContent = delta;
+        }
+        
+        // Process array fields
+        if (data.tags && typeof data.tags === 'string') {
+          data.tags = data.tags.split(',').map(tag => tag.trim()).filter(Boolean);
+        }
+        
+        if (data.categories && typeof data.categories === 'string') {
+          data.categories = data.categories.split(',').map(cat => cat.trim()).filter(Boolean);
+        }
+        
+        // Handle boolean fields
+        data.publishNow = data.publishNow === 'on' || data.publishNow === 'true';
+        
+        // Ensure required fields
+        data.authorEmail = data.authorEmail || data.email || '';
+        data.metaDescription = data.metaDescription || data.description || '';
+        
+        log('Submitting data:', data);
+        
+        // Make API request
+        const response = await fetch(API_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        log('Response:', result);
+        
+        if (response.ok && result.success) {
+          // Success!
+          showSuccess(result);
+          
+          // Reset form
+          form.reset();
+          if (quill) quill.setText('');
+          
+        } else {
+          // API returned an error
+          throw new Error(result.message || 'Submission failed');
+        }
+        
+      } catch (error) {
+        logError('Submission error:', error);
+        showError(error.message);
+        
+      } finally {
+        // Re-enable submit button
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.value = originalText;
+        }
+      }
+    }
+    
+    // Show success message
+    function showSuccess(result) {
+      // Hide form
+      form.style.display = 'none';
+      
+      // Create success message
+      const successDiv = document.createElement('div');
+      successDiv.className = 'w-form-done';
+      successDiv.style.display = 'block';
+      successDiv.innerHTML = `
+        <div>
+          <h3>✅ Success!</h3>
+          <p>Your article has been submitted successfully.</p>
+          ${result.data && result.data.itemId ? `<p>Article ID: ${result.data.itemId}</p>` : ''}
+          ${result.data && result.data.slug ? `<p>Slug: ${result.data.slug}</p>` : ''}
+        </div>
+      `;
+      
+      form.parentNode.insertBefore(successDiv, form.nextSibling);
+    }
+    
+    // Show error message
+    function showError(message) {
+      // Find or create error div
+      let errorDiv = form.parentNode.querySelector('.w-form-fail');
+      
+      if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.className = 'w-form-fail';
+        form.parentNode.insertBefore(errorDiv, form.nextSibling);
+      }
+      
+      errorDiv.style.display = 'block';
+      errorDiv.innerHTML = `
+        <div>
+          <h3>❌ Error</h3>
+          <p>${message}</p>
+        </div>
+      `;
+      
+      // Auto-hide after 10 seconds
+      setTimeout(() => {
+        errorDiv.style.display = 'none';
+      }, 10000);
+    }
+    
+    log('Form handler setup complete');
+  }
+  
+  // Start initialization
+  init();
+  
+})();
+</script>

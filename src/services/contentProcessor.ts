@@ -36,12 +36,34 @@ const WEBFLOW_CLASS_MAP: Record<string, string> = {
 
 // HTML element whitelist for sanitization
 const ALLOWED_TAGS = [
-  "p", "br", "span", "strong", "b", "em", "i", "u", "s", "strike",
-  "h1", "h2", "h3", "h4", "h5", "h6",
-  "blockquote", "pre", "code",
-  "ul", "ol", "li",
-  "a", "img", "iframe",
-  "div", "sub", "sup",
+  "p",
+  "br",
+  "span",
+  "strong",
+  "b",
+  "em",
+  "i",
+  "u",
+  "s",
+  "strike",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "blockquote",
+  "pre",
+  "code",
+  "ul",
+  "ol",
+  "li",
+  "a",
+  "img",
+  "iframe",
+  "div",
+  "sub",
+  "sup",
 ];
 
 const _ALLOWED_ATTRIBUTES: Record<string, string[]> = {
@@ -87,7 +109,7 @@ export interface ConversionResult {
  */
 export function convertDeltaToHtml(
   delta: QuillDelta,
-  options: ConversionOptions = {}
+  options: ConversionOptions = {},
 ): ConversionResult {
   const {
     allowImages = true,
@@ -163,12 +185,12 @@ export function convertDeltaToHtml(
     };
 
     const converter = new QuillDeltaToHtmlConverter(processedOps, finalConverterOptions);
-    
+
     logger.debug("QuillDeltaToHtmlConverter initialized", {
       processedOpsLength: processedOps.length,
       processedOpsFirst: processedOps[0],
       converterType: typeof converter,
-      hasConvertMethod: typeof converter.convert === 'function',
+      hasConvertMethod: typeof converter.convert === "function",
     });
 
     // Custom link handler
@@ -188,63 +210,67 @@ export function convertDeltaToHtml(
 
     // Convert to HTML
     let html = converter.convert();
-    
+
     logger.debug("Initial HTML conversion", {
       htmlResult: html?.substring(0, 100),
       htmlType: typeof html,
       isObjectString: html === "[object Object]",
     });
-    
+
     // Workaround for Deno test environment issue where convert() returns "[object Object]"
     // This appears to be a module resolution issue specific to Deno's test environment
     // The quill-delta-to-html library seems to have compatibility issues with Deno
-    if (html === "[object Object]" || typeof html !== 'string' || html.includes("[object Object]")) {
+    if (
+      html === "[object Object]" || typeof html !== "string" || html.includes("[object Object]")
+    ) {
       logger.warn("HTML conversion returned object, using enhanced fallback converter", {
         originalResult: html,
       });
-      
+
       // Enhanced manual conversion with proper Delta structure handling
       const blocks: string[] = [];
       let currentBlock: string[] = [];
       let listItems: string[] = [];
       let currentListType: string | null = null;
-      
+
       processedOps.forEach((op, index) => {
-        if (typeof op.insert === 'string') {
-          const lines = op.insert.split('\n');
-          
+        if (typeof op.insert === "string") {
+          const lines = op.insert.split("\n");
+
           lines.forEach((line, lineIndex) => {
             if (lineIndex > 0) {
               // Process accumulated content for the previous line
-              if (currentBlock.length > 0 || line === '') {
-                const blockContent = currentBlock.join('');
+              if (currentBlock.length > 0 || line === "") {
+                const blockContent = currentBlock.join("");
                 const prevOp = index > 0 ? processedOps[index - 1] : null;
                 const blockAttributes = prevOp?.attributes || {};
-                
+
                 // Handle list items
                 if (blockAttributes.list) {
-                  const listType = blockAttributes.list === 'ordered' ? 'ol' : 'ul';
-                  
+                  const listType = blockAttributes.list === "ordered" ? "ol" : "ul";
+
                   if (currentListType && currentListType !== listType) {
                     // Close previous list
-                    blocks.push(`<${currentListType}>${listItems.join('')}</${currentListType}>`);
+                    blocks.push(`<${currentListType}>${listItems.join("")}</${currentListType}>`);
                     listItems = [];
                   }
-                  
+
                   currentListType = listType;
                   listItems.push(`<li>${blockContent}</li>`);
                 } else {
                   // Close any open lists
                   if (currentListType && listItems.length > 0) {
-                    blocks.push(`<${currentListType}>${listItems.join('')}</${currentListType}>`);
+                    blocks.push(`<${currentListType}>${listItems.join("")}</${currentListType}>`);
                     listItems = [];
                     currentListType = null;
                   }
-                  
+
                   // Handle other block types
                   if (blockAttributes.header) {
-                    blocks.push(`<h${blockAttributes.header}>${blockContent}</h${blockAttributes.header}>`);
-                  } else if (blockAttributes['code-block']) {
+                    blocks.push(
+                      `<h${blockAttributes.header}>${blockContent}</h${blockAttributes.header}>`,
+                    );
+                  } else if (blockAttributes["code-block"]) {
                     blocks.push(`<pre><code>${blockContent}</code></pre>`);
                   } else if (blockAttributes.blockquote) {
                     blocks.push(`<blockquote>${blockContent}</blockquote>`);
@@ -252,28 +278,29 @@ export function convertDeltaToHtml(
                     blocks.push(`<p>${blockContent}</p>`);
                   }
                 }
-                
+
                 currentBlock = [];
               }
             }
-            
+
             if (line) {
               // Apply inline formatting
               let formattedText = line;
-              
+
               if (op.attributes?.bold) formattedText = `<strong>${formattedText}</strong>`;
               if (op.attributes?.italic) formattedText = `<em>${formattedText}</em>`;
               if (op.attributes?.underline) formattedText = `<u>${formattedText}</u>`;
               if (op.attributes?.strike) formattedText = `<s>${formattedText}</s>`;
               if (op.attributes?.code) formattedText = `<code>${formattedText}</code>`;
               if (op.attributes?.link) {
-                formattedText = `<a href="${op.attributes.link}" target="_blank" rel="noopener noreferrer">${formattedText}</a>`;
+                formattedText =
+                  `<a href="${op.attributes.link}" target="_blank" rel="noopener noreferrer">${formattedText}</a>`;
               }
-              
+
               currentBlock.push(formattedText);
             }
           });
-        } else if (typeof op.insert === 'object') {
+        } else if (typeof op.insert === "object") {
           // Handle embeds
           if (op.insert.image) {
             const imgAttrs = op.attributes || {};
@@ -284,26 +311,28 @@ export function convertDeltaToHtml(
             currentBlock.push(imgHtml);
           } else if (op.insert.video) {
             const videoUrl = processVideoUrl(op.insert.video);
-            currentBlock.push(`<iframe src="${videoUrl}" frameborder="0" allowfullscreen></iframe>`);
+            currentBlock.push(
+              `<iframe src="${videoUrl}" frameborder="0" allowfullscreen></iframe>`,
+            );
           }
         }
       });
-      
+
       // Process any remaining content
       if (currentBlock.length > 0) {
-        const blockContent = currentBlock.join('');
+        const blockContent = currentBlock.join("");
         if (blockContent.trim()) {
           blocks.push(`<p>${blockContent}</p>`);
         }
       }
-      
+
       // Close any open lists
       if (currentListType && listItems.length > 0) {
-        blocks.push(`<${currentListType}>${listItems.join('')}</${currentListType}>`);
+        blocks.push(`<${currentListType}>${listItems.join("")}</${currentListType}>`);
       }
-      
-      html = blocks.join('');
-      
+
+      html = blocks.join("");
+
       logger.debug("Enhanced fallback conversion completed", {
         blocksCount: blocks.length,
         htmlLength: html.length,
@@ -356,7 +385,7 @@ export function convertDeltaToHtml(
 function processVideoUrl(url: string): string {
   // YouTube URL processing
   const youtubeMatch = url.match(
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s]+)/
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s]+)/,
   );
   if (youtubeMatch) {
     return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
@@ -376,7 +405,7 @@ function processVideoUrl(url: string): string {
  */
 function postProcessHtml(
   html: string,
-  classMap: Record<string, string>
+  classMap: Record<string, string>,
 ): string {
   let processed = html;
 
@@ -389,20 +418,20 @@ function postProcessHtml(
   // Add responsive classes to images
   processed = processed.replace(
     /<img([^>]+)>/g,
-    '<img$1 class="w-100" style="max-width: 100%; height: auto;">'
+    '<img$1 class="w-100" style="max-width: 100%; height: auto;">',
   );
 
   // Wrap tables in responsive container (if any)
   processed = processed.replace(
     /<table([^>]*)>/g,
-    '<div class="table-responsive"><table$1 class="table">'
+    '<div class="table-responsive"><table$1 class="table">',
   );
   processed = processed.replace(/<\/table>/g, "</table></div>");
 
   // Add syntax highlighting classes to code blocks
   processed = processed.replace(
     /<pre><code([^>]*)>/g,
-    '<pre class="code-block"><code$1>'
+    '<pre class="code-block"><code$1>',
   );
 
   return processed;

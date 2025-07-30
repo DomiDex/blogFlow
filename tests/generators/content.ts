@@ -21,63 +21,63 @@ export class ContentGenerator {
    */
   static quillDelta(options?: ContentGeneratorOptions): QuillDelta {
     const ops: any[] = [];
-    const { 
-      paragraphs = 3, 
+    const {
+      paragraphs = 3,
       includeFormatting = false,
       includeLists = false,
       includeCode = false,
       includeLinks = false,
       includeHeaders = false,
     } = options || {};
-    
+
     // Add header if requested
     if (includeHeaders) {
       ops.push({
         insert: this.generateSentence(),
-        attributes: { header: 1 }
+        attributes: { header: 1 },
       });
       ops.push({ insert: "\n\n" });
     }
-    
+
     // Generate paragraphs
     for (let i = 0; i < paragraphs; i++) {
       const paragraph = this.generateParagraph();
-      
+
       if (includeFormatting && i === 0) {
         // Add some formatting to the first paragraph
         const words = paragraph.split(" ");
         const boldIndex = Math.floor(words.length / 3);
         const italicIndex = Math.floor(words.length * 2 / 3);
-        
+
         ops.push({ insert: words.slice(0, boldIndex).join(" ") + " " });
         ops.push({
           insert: words.slice(boldIndex, boldIndex + 2).join(" "),
-          attributes: { bold: true }
+          attributes: { bold: true },
         });
         ops.push({ insert: " " + words.slice(boldIndex + 2, italicIndex).join(" ") + " " });
         ops.push({
           insert: words.slice(italicIndex, italicIndex + 2).join(" "),
-          attributes: { italic: true }
+          attributes: { italic: true },
         });
         ops.push({ insert: " " + words.slice(italicIndex + 2).join(" ") });
       } else if (includeLinks && i === 1) {
         // Add a link in the second paragraph
         const words = paragraph.split(" ");
         const linkIndex = Math.floor(words.length / 2);
-        
+
         ops.push({ insert: words.slice(0, linkIndex).join(" ") + " " });
         ops.push({
           insert: "example link",
-          attributes: { link: "https://example.com" }
+          attributes: { link: "https://example.com" },
         });
         ops.push({ insert: " " + words.slice(linkIndex).join(" ") });
       } else {
         ops.push({ insert: paragraph });
       }
-      
+
       ops.push({ insert: "\n\n" });
     }
-    
+
     // Add lists if requested
     if (includeLists) {
       ops.push({ insert: "Here are some important points:\n" });
@@ -86,29 +86,29 @@ export class ContentGenerator {
         "Second item with supporting information",
         "Third item with additional context",
       ];
-      
-      listItems.forEach(item => {
+
+      listItems.forEach((item) => {
         ops.push({
           insert: item + "\n",
-          attributes: { list: "bullet" }
+          attributes: { list: "bullet" },
         });
       });
       ops.push({ insert: "\n" });
     }
-    
+
     // Add code block if requested
     if (includeCode) {
       ops.push({ insert: "Here's an example code snippet:\n" });
       ops.push({
         insert: "const greeting = 'Hello, World!';\nconsole.log(greeting);\n",
-        attributes: { "code-block": true }
+        attributes: { "code-block": true },
       });
       ops.push({ insert: "\n" });
     }
-    
+
     return { ops };
   }
-  
+
   /**
    * Generate a minimal Quill Delta (just enough to pass validation)
    */
@@ -116,21 +116,21 @@ export class ContentGenerator {
     return {
       ops: [{
         insert: "This is a minimal article with just enough content to pass validation. " +
-                "It contains multiple sentences to meet the minimum word count requirement. " +
-                "The content is straightforward without any special formatting. " +
-                "We need at least fifty words to pass the validation checks. " +
-                "This sentence ensures we have sufficient content."
-      }]
+          "It contains multiple sentences to meet the minimum word count requirement. " +
+          "The content is straightforward without any special formatting. " +
+          "We need at least fifty words to pass the validation checks. " +
+          "This sentence ensures we have sufficient content.",
+      }],
     };
   }
-  
+
   /**
    * Generate an empty Quill Delta
    */
   static emptyDelta(): QuillDelta {
     return { ops: [] };
   }
-  
+
   /**
    * Generate a set of test articles
    */
@@ -143,7 +143,7 @@ export class ContentGenerator {
       publishNow: i % 2 === 0, // Alternate between published and draft
     }));
   }
-  
+
   /**
    * Generate content with special characters
    */
@@ -156,10 +156,10 @@ export class ContentGenerator {
         { insert: "Emojis: 🎉 🚀 💻 📚 ✨\n\n" },
         { insert: "Unicode: 你好世界 (Hello World in Chinese)\n\n" },
         { insert: "Math symbols: ∑ ∏ √ ∞ ≠ ≤ ≥\n" },
-      ]
+      ],
     };
   }
-  
+
   // Helper methods
   private static generateSentence(): string {
     const sentences = [
@@ -171,7 +171,7 @@ export class ContentGenerator {
     ];
     return sentences[Math.floor(Math.random() * sentences.length)];
   }
-  
+
   private static generateParagraph(): string {
     const paragraphs = [
       "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.",
@@ -182,7 +182,7 @@ export class ContentGenerator {
     ];
     return paragraphs[Math.floor(Math.random() * paragraphs.length)];
   }
-  
+
   private static generateTitle(): string {
     const titles = [
       "A Comprehensive Guide",
@@ -193,9 +193,9 @@ export class ContentGenerator {
     ];
     return titles[Math.floor(Math.random() * titles.length)];
   }
-  
+
   private static generateMetaDescription(): string {
     return "This comprehensive article provides detailed insights and practical examples. " +
-           "Learn essential concepts and best practices from industry experts.";
+      "Learn essential concepts and best practices from industry experts.";
   }
 }

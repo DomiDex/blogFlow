@@ -1,0 +1,307 @@
+<!-- BlogFlow Script - Targets Specific Form -->
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
+
+<script>
+window.addEventListener('load', function() {
+  console.log('[BlogFlow] Looking for the correct form...');
+  
+  // Debug: Show all forms on page
+  var allForms = document.querySelectorAll('form');
+  console.log('[BlogFlow] Found ' + allForms.length + ' forms on page');
+  
+  for (var i = 0; i < allForms.length; i++) {
+    console.log('Form ' + (i + 1) + ':', {
+      'data-name': allForms[i].getAttribute('data-name'),
+      'id': allForms[i].id,
+      'class': allForms[i].className,
+      'action': allForms[i].action
+    });
+  }
+  
+  setTimeout(function() {
+    initBlogFlow();
+  }, 1000);
+});
+
+function initBlogFlow() {
+  // Try to find the blog form by different methods
+  var form = null;
+  
+  // Method 1: Look for form with blog-related data-name
+  form = document.querySelector('form[data-name*="blog" i]') ||
+         document.querySelector('form[data-name*="article" i]') ||
+         document.querySelector('form[data-name*="submission" i]');
+  
+  // Method 2: Look for form containing the Quill editor
+  if (!form) {
+    var editorElement = document.getElementById('editor');
+    if (editorElement) {
+      form = editorElement.closest('form');
+      console.log('[BlogFlow] Found form containing Quill editor');
+    }
+  }
+  
+  // Method 3: Look for form with article-related fields
+  if (!form) {
+    var allForms = document.querySelectorAll('form');
+    for (var i = 0; i < allForms.length; i++) {
+      var testForm = allForms[i];
+      if (testForm.querySelector('[name="articleTitle"]') || 
+          testForm.querySelector('[name="authorName"]') ||
+          testForm.querySelector('[id="editor"]')) {
+        form = testForm;
+        console.log('[BlogFlow] Found form with article fields');
+        break;
+      }
+    }
+  }
+  
+  // Method 4: Skip the first form (assuming it's a different form)
+  if (!form && allForms.length > 1) {
+    form = allForms[1]; // Use the second form
+    console.log('[BlogFlow] Using second form on page');
+  }
+  
+  if (!form) {
+    console.error('[BlogFlow] Could not find the blog submission form!');
+    
+    // Add helper button to identify forms
+    addFormIdentifier();
+    return;
+  }
+  
+  console.log('[BlogFlow] Using form:', form);
+  
+  // Initialize Quill
+  var quillEditor = null;
+  var editorElement = document.getElementById('editor');
+  
+  if (editorElement && typeof Quill !== 'undefined') {
+    quillEditor = new Quill('#editor', {
+      theme: 'snow',
+      placeholder: 'Write your article content here...',
+      modules: {
+        toolbar: [
+          [{ 'header': [1, 2, 3, false] }],
+          ['bold', 'italic', 'underline'],
+          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+          ['link', 'blockquote'],
+          ['clean']
+        ]
+      }
+    });
+    console.log('[BlogFlow] Quill editor initialized');
+  }
+  
+  // Find submit button within the specific form
+  var submitBtn = form.querySelector('[type="submit"]') || 
+                  form.querySelector('input[value*="Submit"]') ||
+                  form.querySelector('button');
+  
+  if (!submitBtn) {
+    console.error('[BlogFlow] No submit button found in form');
+    return;
+  }
+  
+  // Override form submission
+  form.onsubmit = function(e) {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
+    handleFormSubmit(form, quillEditor, submitBtn);
+    return false;
+  };
+  
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    return false;
+  }, true);
+  
+  console.log('[BlogFlow] Form handler attached successfully');
+}
+
+function handleFormSubmit(form, quillEditor, submitBtn) {
+  console.log('[BlogFlow] Processing submission...');
+  
+  var originalText = submitBtn.value || submitBtn.textContent;
+  submitBtn.disabled = true;
+  if (submitBtn.value) {
+    submitBtn.value = 'Processing...';
+  } else {
+    submitBtn.textContent = 'Processing...';
+  }
+  
+  try {
+    // Collect form data FROM THIS SPECIFIC FORM
+    var formData = {};
+    var inputs = form.querySelectorAll('input, textarea, select');
+    
+    console.log('[BlogFlow] Collecting data from ' + inputs.length + ' inputs');
+    
+    for (var i = 0; i < inputs.length; i++) {
+      var input = inputs[i];
+      if (input.name && !input.name.startsWith('_')) {
+        if (input.type === 'checkbox') {
+          formData[input.name] = input.checked;
+        } else if (input.type === 'radio') {
+          if (input.checked) {
+            formData[input.name] = input.value;
+          }
+        } else {
+          formData[input.name] = input.value;
+        }
+        console.log('[BlogFlow] Field: ' + input.name + ' = ' + formData[input.name]);
+      }
+    }
+    
+    // Add Quill content
+    if (quillEditor) {
+      var delta = quillEditor.getContents();
+      var text = quillEditor.getText().trim();
+      var wordCount = text.split(/\s+/).filter(function(word) {
+        return word.length > 0;
+      }).length;
+      
+      if (wordCount < 50) {
+        throw new Error('Article must be at least 50 words (currently ' + wordCount + ' words)');
+      }
+      
+      formData.articleContent = delta;
+    } else {
+      throw new Error('Article content is required');
+    }
+    
+    // Process arrays
+    if (formData.tags && typeof formData.tags === 'string') {
+      formData.tags = formData.tags.split(',').map(function(tag) {
+        return tag.trim();
+      }).filter(Boolean);
+    }
+    
+    if (formData.categories && typeof formData.categories === 'string') {
+      formData.categories = formData.categories.split(',').map(function(cat) {
+        return cat.trim();
+      }).filter(Boolean);
+    }
+    
+    // Handle checkbox
+    if (formData.publishNow === 'on') {
+      formData.publishNow = true;
+    }
+    
+    // Auto-generate email
+    formData.authorEmail = formData.authorEmail || 'noreply@' + window.location.hostname;
+    
+    // Validate
+    if (!formData.authorName) {
+      throw new Error('Author name is required');
+    }
+    
+    if (!formData.articleTitle) {
+      throw new Error('Article title is required');
+    }
+    
+    if (!formData.metaDescription || formData.metaDescription.length < 50) {
+      throw new Error('Meta description must be at least 50 characters');
+    }
+    
+    console.log('[BlogFlow] Sending data:', formData);
+    
+    // Make API request
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', 'https://dominiquede-blogflow-62.deno.dev/api/webflow-form', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    
+    xhr.onload = function() {
+      try {
+        var response = JSON.parse(xhr.responseText);
+        console.log('[BlogFlow] Response:', response);
+        
+        if (xhr.status === 200 && response.success) {
+          showSuccess(form, response);
+          form.reset();
+          if (quillEditor) {
+            quillEditor.setText('');
+          }
+        } else {
+          showError(form, response.message || 'Submission failed');
+        }
+      } catch (e) {
+        showError(form, 'Invalid response from server');
+      }
+      
+      submitBtn.disabled = false;
+      if (submitBtn.value) {
+        submitBtn.value = originalText;
+      } else {
+        submitBtn.textContent = originalText;
+      }
+    };
+    
+    xhr.onerror = function() {
+      showError(form, 'Network error. Please check your connection.');
+      submitBtn.disabled = false;
+      if (submitBtn.value) {
+        submitBtn.value = originalText;
+      } else {
+        submitBtn.textContent = originalText;
+      }
+    };
+    
+    xhr.send(JSON.stringify(formData));
+    
+  } catch (error) {
+    console.error('[BlogFlow] Error:', error);
+    showError(form, error.message);
+    submitBtn.disabled = false;
+    if (submitBtn.value) {
+      submitBtn.value = originalText;
+    } else {
+      submitBtn.textContent = originalText;
+    }
+  }
+}
+
+function showSuccess(form, response) {
+  form.style.display = 'none';
+  
+  var successDiv = document.createElement('div');
+  successDiv.className = 'w-form-done';
+  successDiv.style.display = 'block';
+  successDiv.innerHTML = '<div><strong>Thank you!</strong><br>' +
+    'Your article has been submitted successfully.' +
+    (response.data && response.data.itemId ? '<br>Article ID: ' + response.data.itemId : '') +
+    '</div>';
+  
+  form.parentNode.insertBefore(successDiv, form.nextSibling);
+}
+
+function showError(form, message) {
+  var errorDiv = form.parentNode.querySelector('.w-form-fail');
+  
+  if (!errorDiv) {
+    errorDiv = document.createElement('div');
+    errorDiv.className = 'w-form-fail';
+    form.parentNode.insertBefore(errorDiv, form.nextSibling);
+  }
+  
+  errorDiv.style.display = 'block';
+  errorDiv.innerHTML = '<div><strong>Error:</strong> ' + message + '</div>';
+  
+  setTimeout(function() {
+    errorDiv.style.display = 'none';
+  }, 10000);
+}
+
+// Helper function to identify forms
+function addFormIdentifier() {
+  var helperDiv = document.createElement('div');
+  helperDiv.style.cssText = 'position: fixed; top: 10px; right: 10px; background: yellow; padding: 10px; z-index: 9999;';
+  helperDiv.innerHTML = '<strong>BlogFlow: Please add id="blog-form" to your blog submission form</strong>';
+  document.body.appendChild(helperDiv);
+}
+
+console.log('[BlogFlow] Script loaded');
+</script>

@@ -9,10 +9,10 @@ export const securityRoutes = new Hono<{ Variables: Variables }>();
 // CSP violation report endpoint
 securityRoutes.post("/api/csp-report", async (c) => {
   const requestId = c.get("requestId");
-  
+
   try {
     const report = await c.req.json();
-    
+
     // Log CSP violation
     logger.warn("CSP Violation Report", {
       requestId,
@@ -52,7 +52,7 @@ securityRoutes.post("/api/csp-report", async (c) => {
 securityRoutes.get("/.well-known/security.txt", (c) => {
   c.header("Content-Type", "text/plain");
   c.header("Cache-Control", "max-age=86400"); // Cache for 24 hours
-  
+
   return c.text(securityTxtHandler());
 });
 
@@ -60,7 +60,7 @@ securityRoutes.get("/.well-known/security.txt", (c) => {
 securityRoutes.get("/robots.txt", (c) => {
   c.header("Content-Type", "text/plain");
   c.header("Cache-Control", "max-age=86400");
-  
+
   // Disallow crawling of API endpoints
   const robotsTxt = `User-agent: *
 Disallow: /api/
@@ -73,7 +73,7 @@ Sitemap: https://example.com/sitemap.xml
 # Crawl-delay (in seconds)
 Crawl-delay: 1
 `;
-  
+
   return c.text(robotsTxt);
 });
 
@@ -81,7 +81,7 @@ Crawl-delay: 1
 securityRoutes.get("/api/security-check", (c) => {
   const headers = Object.fromEntries(c.res.headers);
   const requestId = c.get("requestId");
-  
+
   // Check for essential security headers
   const requiredHeaders = [
     "X-Content-Type-Options",
@@ -91,24 +91,23 @@ securityRoutes.get("/api/security-check", (c) => {
     "Content-Security-Policy",
     "Permissions-Policy",
   ];
-  
-  const missingHeaders = requiredHeaders.filter(header => 
-    !headers[header.toLowerCase()]
-  );
-  
-  const securityScore = ((requiredHeaders.length - missingHeaders.length) / requiredHeaders.length) * 100;
-  
+
+  const missingHeaders = requiredHeaders.filter((header) => !headers[header.toLowerCase()]);
+
+  const securityScore =
+    ((requiredHeaders.length - missingHeaders.length) / requiredHeaders.length) * 100;
+
   logger.info("Security headers check", {
     requestId,
     score: securityScore,
     missingHeaders,
   });
-  
+
   return c.json({
     score: securityScore,
     headers: headers,
     missingHeaders,
-    recommendations: missingHeaders.map(header => ({
+    recommendations: missingHeaders.map((header) => ({
       header,
       description: getHeaderDescription(header),
     })),
@@ -126,6 +125,6 @@ function getHeaderDescription(header: string): string {
     "Content-Security-Policy": "Prevents various injection attacks",
     "Permissions-Policy": "Controls browser features and APIs",
   };
-  
+
   return descriptions[header] || "Security header";
 }

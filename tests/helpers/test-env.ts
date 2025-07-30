@@ -12,19 +12,19 @@ export function setupTestEnvironment() {
   // Save original values
   const varsToOverride = [
     "NODE_ENV",
-    "LOG_LEVEL", 
+    "LOG_LEVEL",
     "WEBFLOW_API_TOKEN",
     "WEBFLOW_COLLECTION_ID",
     "WEBFLOW_SITE_ID",
     "PORT",
     "RATE_LIMIT_WINDOW_MS",
-    "RATE_LIMIT_MAX_REQUESTS"
+    "RATE_LIMIT_MAX_REQUESTS",
   ];
-  
+
   for (const key of varsToOverride) {
     originalEnv.set(key, Deno.env.get(key));
   }
-  
+
   // Set test values
   Deno.env.set("NODE_ENV", "test");
   Deno.env.set("LOG_LEVEL", "error");

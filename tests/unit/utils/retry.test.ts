@@ -1,19 +1,19 @@
 /// <reference lib="deno.ns" />
 
-import { assertEquals, assertRejects, assertExists } from "@std/assert";
-import { describe, it, beforeEach, afterEach } from "@std/testing/bdd";
+import { assertEquals, assertExists, assertRejects } from "@std/assert";
+import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
 import { FakeTime } from "@std/testing/time";
-import { stub, restore } from "@std/testing/mock";
+import { restore, stub } from "@std/testing/mock";
 import {
-  retry,
   CircuitBreaker,
+  type CircuitBreakerMetrics,
+  createWebflowRetryHandler,
+  retry,
+  type RetryOptions,
   retryWithCircuitBreaker,
   WebflowRetryHandler,
-  createWebflowRetryHandler,
-  withRetry,
   withCircuitBreaker,
-  type RetryOptions,
-  type CircuitBreakerMetrics,
+  withRetry,
 } from "@utils/retry.ts";
 import { ExternalServiceError, TimeoutError } from "@utils/errors.ts";
 
@@ -45,9 +45,9 @@ describe("Retry Utils", () => {
         return Promise.resolve("success");
       };
 
-      const result = await retry(fn, { 
+      const result = await retry(fn, {
         maxAttempts: 3,
-        initialDelay: 10
+        initialDelay: 10,
       });
 
       assertEquals(result.data, "success");
@@ -66,7 +66,7 @@ describe("Retry Utils", () => {
 
     it("should use exponential backoff with jitter", async () => {
       let attempts = 0;
-      
+
       const fn = () => {
         attempts++;
         const error = new Error("ETIMEDOUT"); // Retryable error
@@ -81,11 +81,11 @@ describe("Retry Utils", () => {
       });
 
       const totalTime = Date.now() - startTime;
-      
+
       // Should have made 3 attempts
       assertEquals(attempts, 3);
       assertEquals(result.error?.message, "ETIMEDOUT");
-      
+
       // Total time should be at least the sum of delays (minus jitter)
       // Delay 1: ~10ms, Delay 2: ~20ms = ~30ms total minimum
       assertEquals(totalTime >= 20, true);
@@ -107,15 +107,16 @@ describe("Retry Utils", () => {
 
       assertEquals(retryCount, 3);
       assertEquals(result.error?.message, "socket hang up");
-      
+
       // With such a high multiplier, delays should hit the max
       // This test just verifies the function completes with max attempts
     });
 
     it("should handle timeout", async () => {
-      const fn = () => new Promise((resolve) => {
-        setTimeout(() => resolve("late success"), 200);
-      });
+      const fn = () =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve("late success"), 200);
+        });
 
       const result = await retry(fn, {
         maxAttempts: 1,
@@ -128,9 +129,9 @@ describe("Retry Utils", () => {
 
     it("should call onRetry callback", async () => {
       const onRetryCalls: Array<{ error: Error; attempt: number }> = [];
-      
+
       const fn = () => Promise.reject(new Error("Failed to fetch")); // Retryable error
-      
+
       await retry(fn, {
         maxAttempts: 3,
         initialDelay: 10,
@@ -150,7 +151,7 @@ describe("Retry Utils", () => {
         attempts++;
         const error = new Error("HTTP Error") as Error & { status: number };
         error.status = attempts === 1 ? 503 : 200;
-        
+
         if (attempts === 1) {
           return Promise.reject(error);
         }
@@ -214,7 +215,7 @@ describe("Retry Utils", () => {
       });
 
       assertEquals(breaker.getState(), "closed");
-      
+
       const metrics = breaker.getMetrics();
       assertEquals(metrics.state, "closed");
       assertEquals(metrics.failures, 0);
@@ -251,12 +252,12 @@ describe("Retry Utils", () => {
       }
 
       assertEquals(breaker.getState(), "open");
-      
+
       // Should reject immediately when open
       await assertRejects(
         () => breaker.execute(() => Promise.resolve("success")),
         ExternalServiceError,
-        "Circuit breaker is open"
+        "Circuit breaker is open",
       );
     });
 
@@ -278,7 +279,7 @@ describe("Retry Utils", () => {
       assertEquals(breaker.getState(), "open");
 
       // Wait for reset timeout
-      await new Promise(resolve => setTimeout(resolve, 60));
+      await new Promise((resolve) => setTimeout(resolve, 60));
 
       // Next call should attempt (half-open)
       const result = await breaker.execute(() => Promise.resolve("recovered"));
@@ -303,7 +304,7 @@ describe("Retry Utils", () => {
       }
 
       // Wait for reset timeout
-      await new Promise(resolve => setTimeout(resolve, 60));
+      await new Promise((resolve) => setTimeout(resolve, 60));
 
       // Fail during half-open
       try {
@@ -330,7 +331,7 @@ describe("Retry Utils", () => {
       }
 
       // Wait for reset timeout
-      await new Promise(resolve => setTimeout(resolve, 60));
+      await new Promise((resolve) => setTimeout(resolve, 60));
 
       // First half-open attempt
       const result1 = await breaker.execute(() => Promise.resolve("test1"));
@@ -353,7 +354,7 @@ describe("Retry Utils", () => {
 
       // Mix of successes and failures
       await breaker.execute(() => Promise.resolve("ok"));
-      
+
       try {
         await breaker.execute(() => Promise.reject(new Error("fail")));
       } catch {
@@ -366,7 +367,7 @@ describe("Retry Utils", () => {
       assertEquals(metrics.successes, 2);
       assertEquals(metrics.failures, 1);
       assertEquals(metrics.totalRequests, 3);
-      assertEquals(metrics.failureRate, 1/3);
+      assertEquals(metrics.failureRate, 1 / 3);
       assertExists(metrics.lastSuccessTime);
       assertExists(metrics.lastFailureTime);
     });
@@ -391,7 +392,7 @@ describe("Retry Utils", () => {
       assertEquals(metrics.failures, 3);
 
       // Wait past monitoring window
-      await new Promise(resolve => setTimeout(resolve, 120));
+      await new Promise((resolve) => setTimeout(resolve, 120));
 
       // Add one more failure to trigger cleanup
       try {
@@ -449,7 +450,7 @@ describe("Retry Utils", () => {
       };
 
       const result = await retryWithCircuitBreaker(breaker, fn, {
-        initialDelay: 10
+        initialDelay: 10,
       });
 
       assertEquals(result.data, "success");
@@ -475,9 +476,9 @@ describe("Retry Utils", () => {
       const result = await retryWithCircuitBreaker(
         breaker,
         () => Promise.resolve("would succeed"),
-        { 
-          maxAttempts: 1 // Don't retry at all
-        }
+        {
+          maxAttempts: 1, // Don't retry at all
+        },
       );
 
       assertEquals(result.error instanceof ExternalServiceError, true);
@@ -488,7 +489,7 @@ describe("Retry Utils", () => {
   describe("WebflowRetryHandler", () => {
     it("should create with default options", () => {
       const handler = new WebflowRetryHandler();
-      
+
       assertEquals(handler.isHealthy(), true);
       const metrics = handler.getMetrics();
       assertEquals(metrics.state, "closed");
@@ -496,7 +497,7 @@ describe("Retry Utils", () => {
 
     it("should execute successfully", async () => {
       const handler = createWebflowRetryHandler();
-      
+
       const result = await handler.execute(() => Promise.resolve({ id: "123" }));
       assertEquals(result, { id: "123" });
     });
@@ -540,7 +541,7 @@ describe("Retry Utils", () => {
       }
 
       assertEquals(handler.isHealthy(), false);
-      
+
       // Reset
       handler.reset();
       assertEquals(handler.isHealthy(), true);
@@ -558,9 +559,9 @@ describe("Retry Utils", () => {
         return `processed: ${value}`;
       };
 
-      const fnWithRetry = withRetry(originalFn, { 
+      const fnWithRetry = withRetry(originalFn, {
         maxAttempts: 3,
-        initialDelay: 10 
+        initialDelay: 10,
       });
       const result = await fnWithRetry("test");
 
@@ -598,7 +599,7 @@ describe("Retry Utils", () => {
       await assertRejects(
         () => fnWithBreaker(false),
         ExternalServiceError,
-        "Circuit breaker is open"
+        "Circuit breaker is open",
       );
     });
   });
@@ -629,7 +630,7 @@ describe("Retry Utils", () => {
 
     it("should handle custom retryable errors", async () => {
       class CustomError extends Error {}
-      
+
       let attempts = 0;
       const fn = () => {
         attempts++;

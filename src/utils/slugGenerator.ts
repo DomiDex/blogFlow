@@ -33,12 +33,59 @@ const DEFAULT_OPTIONS: Required<SlugOptions> = {
  * Common English stop words to remove for SEO optimization
  */
 const STOP_WORDS = new Set([
-  "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
-  "has", "he", "in", "is", "it", "its", "of", "on", "that", "the",
-  "to", "was", "will", "with", "the", "this", "but", "they", "have",
-  "had", "what", "when", "where", "who", "which", "why", "how",
-  "can", "could", "should", "would", "may", "might", "must", "shall",
-  "will", "do", "does", "did", "has", "have", "had", "having",
+  "a",
+  "an",
+  "and",
+  "are",
+  "as",
+  "at",
+  "be",
+  "by",
+  "for",
+  "from",
+  "has",
+  "he",
+  "in",
+  "is",
+  "it",
+  "its",
+  "of",
+  "on",
+  "that",
+  "the",
+  "to",
+  "was",
+  "will",
+  "with",
+  "the",
+  "this",
+  "but",
+  "they",
+  "have",
+  "had",
+  "what",
+  "when",
+  "where",
+  "who",
+  "which",
+  "why",
+  "how",
+  "can",
+  "could",
+  "should",
+  "would",
+  "may",
+  "might",
+  "must",
+  "shall",
+  "will",
+  "do",
+  "does",
+  "did",
+  "has",
+  "have",
+  "had",
+  "having",
 ]);
 
 /**
@@ -51,7 +98,7 @@ const CHAR_REPLACEMENTS = new Map([
   ["£", "pound"],
   ["¥", "yen"],
   ["¢", "cent"],
-  
+
   // Common symbols
   ["&", "and"],
   ["+", "plus"],
@@ -59,7 +106,7 @@ const CHAR_REPLACEMENTS = new Map([
   ["%", " percent"],
   ["#", "number"],
   ["*", "star"],
-  
+
   // Punctuation that should become spaces
   [".", " "],
   [",", " "],
@@ -78,7 +125,7 @@ const CHAR_REPLACEMENTS = new Map([
   ["|", " "],
   ["\\", " "],
   ["/", " "],
-  ["\"", " "],
+  ['"', " "],
   ["'", " "],
   ["`", " "],
   ["~", " "],
@@ -89,20 +136,62 @@ const CHAR_REPLACEMENTS = new Map([
  * Accent character map for normalization
  */
 const ACCENT_MAP = new Map([
-  ["à", "a"], ["á", "a"], ["ä", "a"], ["â", "a"], ["ã", "a"], ["å", "a"], ["ā", "a"],
-  ["è", "e"], ["é", "e"], ["ë", "e"], ["ê", "e"], ["ē", "e"], ["ė", "e"], ["ę", "e"],
-  ["ì", "i"], ["í", "i"], ["ï", "i"], ["î", "i"], ["ī", "i"], ["į", "i"],
-  ["ò", "o"], ["ó", "o"], ["ö", "o"], ["ô", "o"], ["õ", "o"], ["ø", "o"], ["ō", "o"],
-  ["ù", "u"], ["ú", "u"], ["ü", "u"], ["û", "u"], ["ū", "u"], ["ů", "u"],
-  ["ñ", "n"], ["ň", "n"], ["ń", "n"],
-  ["ç", "c"], ["č", "c"], ["ć", "c"],
-  ["ž", "z"], ["ź", "z"], ["ż", "z"],
-  ["š", "s"], ["ś", "s"], ["ș", "s"],
-  ["ł", "l"], ["ľ", "l"], ["ĺ", "l"],
-  ["ý", "y"], ["ÿ", "y"],
-  ["đ", "d"], ["ď", "d"],
-  ["ř", "r"], ["ŕ", "r"],
-  ["ť", "t"], ["ț", "t"],
+  ["à", "a"],
+  ["á", "a"],
+  ["ä", "a"],
+  ["â", "a"],
+  ["ã", "a"],
+  ["å", "a"],
+  ["ā", "a"],
+  ["è", "e"],
+  ["é", "e"],
+  ["ë", "e"],
+  ["ê", "e"],
+  ["ē", "e"],
+  ["ė", "e"],
+  ["ę", "e"],
+  ["ì", "i"],
+  ["í", "i"],
+  ["ï", "i"],
+  ["î", "i"],
+  ["ī", "i"],
+  ["į", "i"],
+  ["ò", "o"],
+  ["ó", "o"],
+  ["ö", "o"],
+  ["ô", "o"],
+  ["õ", "o"],
+  ["ø", "o"],
+  ["ō", "o"],
+  ["ù", "u"],
+  ["ú", "u"],
+  ["ü", "u"],
+  ["û", "u"],
+  ["ū", "u"],
+  ["ů", "u"],
+  ["ñ", "n"],
+  ["ň", "n"],
+  ["ń", "n"],
+  ["ç", "c"],
+  ["č", "c"],
+  ["ć", "c"],
+  ["ž", "z"],
+  ["ź", "z"],
+  ["ż", "z"],
+  ["š", "s"],
+  ["ś", "s"],
+  ["ș", "s"],
+  ["ł", "l"],
+  ["ľ", "l"],
+  ["ĺ", "l"],
+  ["ý", "y"],
+  ["ÿ", "y"],
+  ["đ", "d"],
+  ["ď", "d"],
+  ["ř", "r"],
+  ["ŕ", "r"],
+  ["ť", "t"],
+  ["ț", "t"],
   ["ß", "ss"],
   ["æ", "ae"],
   ["œ", "oe"],
@@ -252,16 +341,16 @@ function removeNonAscii(text: string): string {
  */
 function removeStopWords(text: string): string {
   const words = text.split(/\s+/);
-  const filtered = words.filter(word => {
+  const filtered = words.filter((word) => {
     const lowercaseWord = word.toLowerCase();
     return !STOP_WORDS.has(lowercaseWord) || word.length === 0;
   });
-  
+
   // If all words were stop words, return original text
   if (filtered.length === 0) {
     return text;
   }
-  
+
   return filtered.join(" ");
 }
 
@@ -276,12 +365,12 @@ function truncateSlug(slug: string, maxLength: number, separator: string): strin
   // Try to cut at a separator
   const truncated = slug.substring(0, maxLength);
   const lastSeparator = truncated.lastIndexOf(separator);
-  
+
   // If we found a separator and it's not too far from the end
   if (lastSeparator > maxLength * 0.7) {
     return truncated.substring(0, lastSeparator);
   }
-  
+
   // Otherwise, just truncate at maxLength
   return truncated;
 }
@@ -291,7 +380,7 @@ function truncateSlug(slug: string, maxLength: number, separator: string): strin
  */
 export function isValidSlug(slug: string, options: SlugOptions = {}): boolean {
   const opts = { ...DEFAULT_OPTIONS, ...options };
-  
+
   if (!slug || typeof slug !== "string") {
     return false;
   }
@@ -305,7 +394,7 @@ export function isValidSlug(slug: string, options: SlugOptions = {}): boolean {
   const validPattern = opts.strict
     ? /^[a-z0-9]+(?:-[a-z0-9]+)*$/
     : /^[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*$/;
-    
+
   return validPattern.test(slug);
 }
 
@@ -315,10 +404,10 @@ export function isValidSlug(slug: string, options: SlugOptions = {}): boolean {
 export function generateUniqueSlug(
   text: string,
   existingSlugs: string[],
-  options: SlugOptions = {}
+  options: SlugOptions = {},
 ): string {
   const baseSlug = generateSlug(text, options);
-  
+
   if (!existingSlugs.includes(baseSlug)) {
     return baseSlug;
   }
@@ -327,16 +416,16 @@ export function generateUniqueSlug(
   let counter = 1;
   let uniqueSlug = baseSlug;
   const opts = { ...DEFAULT_OPTIONS, ...options };
-  
+
   while (existingSlugs.includes(uniqueSlug)) {
     const suffix = `${opts.separator}${counter}`;
     const maxBaseLength = opts.maxLength - suffix.length;
-    
+
     // Truncate base slug if needed to accommodate suffix
     const truncatedBase = baseSlug.length > maxBaseLength
       ? truncateSlug(baseSlug, maxBaseLength, opts.separator)
       : baseSlug;
-      
+
     uniqueSlug = `${truncatedBase}${suffix}`;
     counter++;
 
@@ -357,23 +446,23 @@ export function generateUniqueSlug(
 export function extractKeywords(text: string, maxKeywords: number = 5): string[] {
   // Remove HTML tags
   const cleanText = removeHtmlTags(text);
-  
+
   // Split into words and normalize
   const words = cleanText
     .toLowerCase()
     .split(/\s+/)
-    .map(word => word.replace(/[^a-z0-9]/g, ""))
-    .filter(word => word.length > 2); // Remove very short words
-  
+    .map((word) => word.replace(/[^a-z0-9]/g, ""))
+    .filter((word) => word.length > 2); // Remove very short words
+
   // Remove stop words
-  const keywords = words.filter(word => !STOP_WORDS.has(word));
-  
+  const keywords = words.filter((word) => !STOP_WORDS.has(word));
+
   // Count frequency
   const frequency = new Map<string, number>();
-  keywords.forEach(word => {
+  keywords.forEach((word) => {
     frequency.set(word, (frequency.get(word) || 0) + 1);
   });
-  
+
   // Sort by frequency and return top keywords
   return Array.from(frequency.entries())
     .sort((a, b) => b[1] - a[1])
@@ -386,7 +475,7 @@ export function extractKeywords(text: string, maxKeywords: number = 5): string[]
  */
 export function createSlugFromKeywords(
   keywords: string[],
-  options: SlugOptions = {}
+  options: SlugOptions = {},
 ): string {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const text = keywords.join(" ");

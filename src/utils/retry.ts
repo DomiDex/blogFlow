@@ -1,15 +1,15 @@
 /// <reference lib="deno.ns" />
 import { logger } from "@utils/logger.ts";
 import { ExternalServiceError, TimeoutError } from "@utils/errors.ts";
-import { 
-  isWebflowError, 
-  isRetryableError as isWebflowRetryableError, 
+import {
   getErrorRecoveryStrategy,
-  type WebflowError as _WebflowError 
+  isRetryableError as isWebflowRetryableError,
+  isWebflowError,
+  type WebflowError as _WebflowError,
 } from "@utils/webflowErrors.ts";
 
 // Type for error constructors that we can check instanceof against
-type ErrorConstructor = { new(...args: unknown[]): Error; prototype: Error };
+type ErrorConstructor = { new (...args: unknown[]): Error; prototype: Error };
 
 export interface RetryOptions {
   maxAttempts?: number;
@@ -46,7 +46,7 @@ function calculateDelay(
   attempt: number,
   initialDelay: number,
   maxDelay: number,
-  backoffMultiplier: number
+  backoffMultiplier: number,
 ): number {
   const exponentialDelay = initialDelay * Math.pow(backoffMultiplier, attempt - 1);
   const clampedDelay = Math.min(exponentialDelay, maxDelay);
@@ -59,7 +59,7 @@ function calculateDelay(
 function isRetryableError(
   error: unknown,
   retryableStatuses: number[],
-  retryableErrors: ErrorConstructor[]
+  retryableErrors: ErrorConstructor[],
 ): boolean {
   if (!error) return false;
 
@@ -94,7 +94,7 @@ function isRetryableError(
       "NetworkError",
       "timeout",
     ];
-    return transientMessages.some(msg => error.message.includes(msg));
+    return transientMessages.some((msg) => error.message.includes(msg));
   }
 
   return false;
@@ -103,7 +103,7 @@ function isRetryableError(
 // Retry with exponential backoff
 export async function retry<T>(
   fn: () => Promise<T>,
-  options: RetryOptions = {}
+  options: RetryOptions = {},
 ): Promise<RetryResult<T>> {
   const opts = { ...defaultRetryOptions, ...options };
   const startTime = performance.now();
@@ -111,7 +111,7 @@ export async function retry<T>(
 
   for (let attempt = 1; attempt <= opts.maxAttempts; attempt++) {
     let timeoutId: number | undefined;
-    
+
     try {
       // Create a timeout promise if timeout is specified
       const timeoutPromise = new Promise<never>((_, reject) => {
@@ -125,7 +125,7 @@ export async function retry<T>(
       // Race between the function and timeout
       const data = await Promise.race([
         fn(),
-        ...(timeoutId !== undefined ? [timeoutPromise] : [])
+        ...(timeoutId !== undefined ? [timeoutPromise] : []),
       ]);
 
       // Clear timeout if successful
@@ -159,12 +159,12 @@ export async function retry<T>(
         isRetryableError(lastError, opts.retryableStatuses, opts.retryableErrors)
       ) {
         let delay: number;
-        
+
         // Use Webflow-specific delay calculation if it's a Webflow error
         if (isWebflowError(lastError)) {
           const strategy = getErrorRecoveryStrategy(lastError, attempt);
           delay = strategy.retryDelay;
-          
+
           // Override max attempts based on strategy
           if (!strategy.shouldRetry) {
             break;
@@ -174,7 +174,7 @@ export async function retry<T>(
             attempt,
             opts.initialDelay,
             opts.maxDelay,
-            opts.backoffMultiplier
+            opts.backoffMultiplier,
           );
         }
 
@@ -188,7 +188,7 @@ export async function retry<T>(
         });
 
         // Wait before next attempt
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
       } else {
         // No more retries or non-retryable error
         break;
@@ -235,10 +235,10 @@ export class CircuitBreaker {
   private halfOpenAttempts = 0;
   private state: "closed" | "open" | "half-open" = "closed";
   private readonly recentFailures: Date[] = [];
-  
+
   constructor(
     private readonly name: string,
-    private readonly options: CircuitBreakerOptions
+    private readonly options: CircuitBreakerOptions,
   ) {
     this.options = {
       monitoringWindow: 300000, // 5 minutes
@@ -260,15 +260,19 @@ export class CircuitBreaker {
       } else {
         throw new ExternalServiceError(
           this.name,
-          `Circuit breaker is open for ${this.name}. Will retry after ${Math.ceil((this.options.resetTimeout - (now - this.lastFailureTime)) / 1000)}s`
+          `Circuit breaker is open for ${this.name}. Will retry after ${
+            Math.ceil((this.options.resetTimeout - (now - this.lastFailureTime)) / 1000)
+          }s`,
         );
       }
     }
 
-    if (this.state === "half-open" && this.halfOpenAttempts >= (this.options.halfOpenMaxCalls || 3)) {
+    if (
+      this.state === "half-open" && this.halfOpenAttempts >= (this.options.halfOpenMaxCalls || 3)
+    ) {
       throw new ExternalServiceError(
         this.name,
-        `Circuit breaker is in half-open state but max test calls (${this.options.halfOpenMaxCalls}) exceeded`
+        `Circuit breaker is in half-open state but max test calls (${this.options.halfOpenMaxCalls}) exceeded`,
       );
     }
 
@@ -352,18 +356,18 @@ export class CircuitBreaker {
 
   private cleanupOldFailures(): void {
     if (!this.options.monitoringWindow) return;
-    
+
     const cutoff = Date.now() - this.options.monitoringWindow;
     const initialLength = this.recentFailures.length;
-    
+
     let i = 0;
     while (i < this.recentFailures.length && this.recentFailures[i].getTime() < cutoff) {
       i++;
     }
-    
+
     if (i > 0) {
       this.recentFailures.splice(0, i);
-      
+
       if (initialLength - this.recentFailures.length > 0) {
         logger.debug(`Circuit breaker ${this.name} cleaned up old failures`, {
           removed: initialLength - this.recentFailures.length,
@@ -375,7 +379,7 @@ export class CircuitBreaker {
 
   getMetrics(): CircuitBreakerMetrics {
     this.cleanupOldFailures();
-    
+
     return {
       state: this.state,
       failures: this.failures,
@@ -411,11 +415,11 @@ export class CircuitBreaker {
 export function retryWithCircuitBreaker<T>(
   circuitBreaker: CircuitBreaker,
   fn: () => Promise<T>,
-  retryOptions?: RetryOptions
+  retryOptions?: RetryOptions,
 ): Promise<RetryResult<T>> {
   return retry(
     () => circuitBreaker.execute(fn),
-    retryOptions
+    retryOptions,
   );
 }
 
@@ -429,7 +433,7 @@ export class WebflowRetryHandler {
   constructor(
     name: string = "webflow-api",
     circuitBreakerOptions?: Partial<CircuitBreakerOptions>,
-    retryOptions?: Partial<RetryOptions>
+    retryOptions?: Partial<RetryOptions>,
   ) {
     this.circuitBreaker = new CircuitBreaker(name, {
       failureThreshold: 5,
@@ -450,7 +454,7 @@ export class WebflowRetryHandler {
    */
   async execute<T>(
     fn: () => Promise<T>,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ): Promise<T> {
     const result = await retryWithCircuitBreaker(
       this.circuitBreaker,
@@ -464,11 +468,11 @@ export class WebflowRetryHandler {
             error: error instanceof Error ? error : new Error(String(error)),
             context,
           });
-          
+
           // Call original onRetry if provided
           this.retryOptions.onRetry(error, attempt);
         },
-      }
+      },
     );
 
     if (!result.data && result.error) {
@@ -509,12 +513,12 @@ export function createWebflowRetryHandler(
     name?: string;
     circuitBreaker?: Partial<CircuitBreakerOptions>;
     retry?: Partial<RetryOptions>;
-  }
+  },
 ): WebflowRetryHandler {
   return new WebflowRetryHandler(
     options?.name,
     options?.circuitBreaker,
-    options?.retry
+    options?.retry,
   );
 }
 
@@ -523,15 +527,15 @@ export function createWebflowRetryHandler(
  */
 export function withRetry<TArgs extends unknown[], TReturn>(
   fn: (...args: TArgs) => Promise<TReturn>,
-  retryOptions?: Partial<RetryOptions>
+  retryOptions?: Partial<RetryOptions>,
 ) {
   return async (...args: TArgs): Promise<TReturn> => {
     const result = await retry(() => fn(...args), retryOptions);
-    
+
     if (!result.data && result.error) {
       throw result.error;
     }
-    
+
     return result.data!;
   };
 }
@@ -542,7 +546,7 @@ export function withRetry<TArgs extends unknown[], TReturn>(
 export function withCircuitBreaker<TArgs extends unknown[], TReturn>(
   fn: (...args: TArgs) => Promise<TReturn>,
   circuitBreakerName: string,
-  options?: Partial<CircuitBreakerOptions>
+  options?: Partial<CircuitBreakerOptions>,
 ) {
   const circuitBreaker = new CircuitBreaker(circuitBreakerName, {
     failureThreshold: 5,

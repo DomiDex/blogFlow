@@ -9,10 +9,12 @@ import { logger } from "@utils/logger.ts";
 export async function parseFormData(c: Context, next: Next) {
   const requestId = c.get("requestId") as string;
   const contentType = c.req.header("content-type") || "";
-  
+
   // Only process form-encoded data
-  if (!contentType.includes("application/x-www-form-urlencoded") && 
-      !contentType.includes("multipart/form-data")) {
+  if (
+    !contentType.includes("application/x-www-form-urlencoded") &&
+    !contentType.includes("multipart/form-data")
+  ) {
     await next();
     return;
   }
@@ -26,17 +28,17 @@ export async function parseFormData(c: Context, next: Next) {
 
     // Parse form data
     const formData = await c.req.parseBody();
-    
+
     // Convert form data to expected JSON structure
     const jsonData: Record<string, unknown> = {};
-    
+
     for (const [key, value] of Object.entries(formData)) {
       // Handle special cases for our form fields
       switch (key) {
-        case 'content':
-        case 'articleContent':
+        case "content":
+        case "articleContent":
           // Parse Quill content from HTML or Delta JSON string
-          if (typeof value === 'string') {
+          if (typeof value === "string") {
             try {
               // Try to parse as Delta JSON first
               const parsed = JSON.parse(value);
@@ -44,31 +46,31 @@ export async function parseFormData(c: Context, next: Next) {
             } catch {
               // If not JSON, treat as HTML and convert to Delta format
               jsonData.articleContent = {
-                ops: [{ insert: value }]
+                ops: [{ insert: value }],
               };
             }
           }
           break;
-          
-        case 'tags':
-        case 'categories':
+
+        case "tags":
+        case "categories":
           // Convert comma-separated values to array
-          if (typeof value === 'string' && value.trim()) {
-            jsonData[key] = value.split(',').map(item => item.trim()).filter(Boolean);
+          if (typeof value === "string" && value.trim()) {
+            jsonData[key] = value.split(",").map((item) => item.trim()).filter(Boolean);
           }
           break;
-          
-        case 'publishNow':
+
+        case "publishNow":
           // Convert string boolean to actual boolean
-          jsonData[key] = value === 'true' || value === '1' || value === 'on';
+          jsonData[key] = value === "true" || value === "1" || value === "on";
           break;
-          
+
         default:
           // Pass through other fields as-is
           jsonData[key] = value;
       }
     }
-    
+
     logger.debug("Form data converted to JSON", {
       requestId,
       fields: Object.keys(jsonData),
@@ -78,7 +80,7 @@ export async function parseFormData(c: Context, next: Next) {
     // Override the request json() method to return our parsed data
     // deno-lint-ignore no-explicit-any
     c.req.json = () => Promise.resolve(jsonData as any);
-    
+
     await next();
   } catch (error) {
     logger.error("Failed to parse form data", {

@@ -34,20 +34,60 @@ export class SlugService {
 
   // Reserved slugs that cannot be used
   private readonly reservedSlugs = new Set([
-    'admin', 'api', 'app', 'blog', 'cms', 'dashboard',
-    'docs', 'help', 'home', 'login', 'logout', 'profile',
-    'privacy', 'terms', 'about', 'contact', 'support',
-    'search', 'sitemap', 'robots', 'favicon', 'assets',
-    'static', 'public', 'www', 'mail', 'email', 'news',
-    'events', 'gallery', 'portfolio', 'services', 'products',
-    'shop', 'store', 'cart', 'checkout', 'payment', 'order',
-    'account', 'settings', 'config', 'test', 'staging',
-    'dev', 'development', 'prod', 'production', 'preview'
+    "admin",
+    "api",
+    "app",
+    "blog",
+    "cms",
+    "dashboard",
+    "docs",
+    "help",
+    "home",
+    "login",
+    "logout",
+    "profile",
+    "privacy",
+    "terms",
+    "about",
+    "contact",
+    "support",
+    "search",
+    "sitemap",
+    "robots",
+    "favicon",
+    "assets",
+    "static",
+    "public",
+    "www",
+    "mail",
+    "email",
+    "news",
+    "events",
+    "gallery",
+    "portfolio",
+    "services",
+    "products",
+    "shop",
+    "store",
+    "cart",
+    "checkout",
+    "payment",
+    "order",
+    "account",
+    "settings",
+    "config",
+    "test",
+    "staging",
+    "dev",
+    "development",
+    "prod",
+    "production",
+    "preview",
   ]);
 
   constructor(webflowService: WebflowService) {
     this.webflowService = webflowService;
-    
+
     // Clean up cache periodically
     this.cleanupInterval = setInterval(() => this.cleanupCache(), this.cacheTimeout);
   }
@@ -56,14 +96,14 @@ export class SlugService {
    * Generate a unique, SEO-friendly slug from a title
    */
   async generateUniqueSlug(
-    title: string, 
-    options: SlugGenerationOptions = {}
+    title: string,
+    options: SlugGenerationOptions = {},
   ): Promise<SlugValidationResult> {
     const opts = {
       maxLength: 100,
       preserveCase: false,
       allowNumbers: true,
-      separator: '-',
+      separator: "-",
       maxAttempts: 10,
       ...options,
     };
@@ -71,7 +111,7 @@ export class SlugService {
     try {
       // Generate base slug
       const baseSlug = this.generateBaseSlug(title, opts);
-      
+
       logger.debug("Generating unique slug", {
         title,
         baseSlug,
@@ -86,7 +126,7 @@ export class SlugService {
 
       // Check uniqueness and generate alternatives if needed
       const uniqueResult = await this.ensureUniqueness(baseSlug, opts);
-      
+
       logger.info("Slug generation completed", {
         title,
         originalSlug: baseSlug,
@@ -104,7 +144,9 @@ export class SlugService {
       return {
         isValid: false,
         isUnique: false,
-        errors: [`Failed to generate slug: ${error instanceof Error ? error.message : String(error)}`],
+        errors: [
+          `Failed to generate slug: ${error instanceof Error ? error.message : String(error)}`,
+        ],
       };
     }
   }
@@ -124,7 +166,7 @@ export class SlugService {
 
       // Check uniqueness
       const isUnique = await this.checkSlugUniqueness(slug);
-      
+
       const result: SlugValidationResult = {
         isValid: true,
         isUnique,
@@ -164,7 +206,7 @@ export class SlugService {
     let slug = title.trim();
 
     // Normalize Unicode characters
-    slug = slug.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    slug = slug.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
     // Convert to lowercase unless preserveCase is true
     if (!options.preserveCase) {
@@ -173,30 +215,30 @@ export class SlugService {
 
     // Replace spaces and special characters with separator
     slug = slug
-      .replace(/[^a-z0-9\s-]/gi, '') // Remove special characters except spaces and hyphens
-      .replace(/\s+/g, options.separator || '-') // Replace spaces with separator
-      .replace(/-+/g, '-'); // Replace multiple hyphens with single hyphen
+      .replace(/[^a-z0-9\s-]/gi, "") // Remove special characters except spaces and hyphens
+      .replace(/\s+/g, options.separator || "-") // Replace spaces with separator
+      .replace(/-+/g, "-"); // Replace multiple hyphens with single hyphen
 
     // Remove numbers if not allowed
     if (!options.allowNumbers) {
-      slug = slug.replace(/[0-9]/g, '');
+      slug = slug.replace(/[0-9]/g, "");
     }
 
     // Remove leading and trailing separators
-    const separator = options.separator || '-';
-    const separatorRegex = new RegExp(`^${separator}+|${separator}+$`, 'g');
-    slug = slug.replace(separatorRegex, '');
+    const separator = options.separator || "-";
+    const separatorRegex = new RegExp(`^${separator}+|${separator}+$`, "g");
+    slug = slug.replace(separatorRegex, "");
 
     // Truncate to max length
     if (options.maxLength && slug.length > options.maxLength) {
       slug = slug.substring(0, options.maxLength);
       // Ensure we don't end with a separator after truncation
-      slug = slug.replace(new RegExp(`${separator}+$`), '');
+      slug = slug.replace(new RegExp(`${separator}+$`), "");
     }
 
     // Ensure minimum length
     if (slug.length < 1) {
-      slug = 'article';
+      slug = "article";
     }
 
     return slug;
@@ -233,7 +275,7 @@ export class SlugService {
     }
 
     // Check for leading/trailing hyphens
-    if (slug.startsWith('-') || slug.endsWith('-')) {
+    if (slug.startsWith("-") || slug.endsWith("-")) {
       errors.push("Slug cannot start or end with a hyphen");
     }
 
@@ -258,8 +300,8 @@ export class SlugService {
    * Ensure slug uniqueness by checking against existing CMS items
    */
   private async ensureUniqueness(
-    baseSlug: string, 
-    options: SlugGenerationOptions
+    baseSlug: string,
+    options: SlugGenerationOptions,
   ): Promise<SlugValidationResult & { attempts?: number }> {
     const maxAttempts = options.maxAttempts || 10;
     let currentSlug = baseSlug;
@@ -268,7 +310,7 @@ export class SlugService {
     for (let i = 0; i < maxAttempts; i++) {
       attempts++;
       const isUnique = await this.checkSlugUniqueness(currentSlug);
-      
+
       if (isUnique) {
         return {
           isValid: true,
@@ -296,7 +338,7 @@ export class SlugService {
     // If we couldn't find a unique slug after max attempts, use timestamp
     const timestamp = Date.now().toString().slice(-8);
     const timestampSlug = `${baseSlug}-${timestamp}`;
-    
+
     // Truncate if needed
     let finalSlug = timestampSlug;
     if (options.maxLength && finalSlug.length > options.maxLength) {
@@ -336,7 +378,7 @@ export class SlugService {
     try {
       // Check via Webflow API
       const result = await this.webflowService.checkSlugExists(slug);
-      
+
       // Cache the result
       this.addToCache(slug, {
         slug,
@@ -357,7 +399,7 @@ export class SlugService {
         slug,
         error: error instanceof Error ? error : new Error(String(error)),
       });
-      
+
       // On error, assume slug is not unique to be safe
       return false;
     }
@@ -368,7 +410,7 @@ export class SlugService {
    */
   private generateSuggestions(slug: string): string[] {
     const suggestions: string[] = [];
-    const baseSlug = slug.replace(/-\d+$/, ''); // Remove trailing numbers
+    const baseSlug = slug.replace(/-\d+$/, ""); // Remove trailing numbers
 
     // Generate numbered variations
     for (let i = 2; i <= 5; i++) {
@@ -380,7 +422,7 @@ export class SlugService {
     suggestions.push(`${baseSlug}-${timestamp}`);
 
     // Add word variations
-    const commonSuffixes = ['article', 'post', 'guide', 'story'];
+    const commonSuffixes = ["article", "post", "guide", "story"];
     for (const suffix of commonSuffixes) {
       suggestions.push(`${baseSlug}-${suffix}`);
     }

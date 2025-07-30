@@ -16,26 +16,26 @@ import { createApp } from "@/app.ts";
 describe("Simple Mock Test", () => {
   it("should create app and handle health check", async () => {
     const app = createApp({ testing: true });
-    
+
     const response = await app.request("/health");
-    
+
     assertEquals(response.status, 200);
-    
+
     const result = await response.json();
     assertEquals(result.status, "healthy");
   });
-  
+
   it("should reject unauthorized requests", async () => {
     const app = createApp({ testing: true });
-    
+
     const response = await app.request("/api/webflow-form", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ test: "data" })
+      body: JSON.stringify({ test: "data" }),
     });
-    
+
     assertEquals(response.status, 401);
   });
 });

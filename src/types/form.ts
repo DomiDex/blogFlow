@@ -2,13 +2,13 @@
 
 // Re-export types from validation to maintain backwards compatibility
 export type {
-  FormData,
-  UpdateFormData,
   DraftFormData,
+  FormData,
   QuillDelta,
   QuillOp,
+  UpdateFormData,
+  ValidationError,
   ValidationResult,
-  ValidationError
 } from "@utils/validation.ts";
 
 // Raw form data as received from Webflow (before validation)
@@ -29,9 +29,11 @@ export interface ProcessedFormData {
   authorName: string;
   articleTitle: string;
   metaDescription: string;
-  articleContent: { ops: Array<{ insert?: unknown; attributes?: unknown; retain?: number; delete?: number }> };
+  articleContent: {
+    ops: Array<{ insert?: unknown; attributes?: unknown; retain?: number; delete?: number }>;
+  };
   publishNow?: boolean;
-  
+
   // Optional validated fields
   authorEmail?: string;
   authorPhone?: string;
@@ -46,7 +48,7 @@ export interface ProcessedFormData {
   introText?: string;
   htmlContent?: string; // Converted from Quill Delta
   wordCount?: number;
-  
+
   // Processing metadata
   processedAt: string;
   requestId?: string;

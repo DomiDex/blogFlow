@@ -1,8 +1,12 @@
 /// <reference lib="deno.ns" />
 import { logger } from "@utils/logger.ts";
-import { parseWebflowError, parseNetworkError } from "@utils/webflowErrors.ts";
+import { parseNetworkError, parseWebflowError } from "@utils/webflowErrors.ts";
 import { createWebflowRetryHandler, type WebflowRetryHandler } from "@utils/retry.ts";
-import type { WebflowCollectionItem, WebflowCreateItemRequest, WebflowListResponse } from "../types/webflow.ts";
+import type {
+  WebflowCollectionItem,
+  WebflowCreateItemRequest,
+  WebflowListResponse,
+} from "../types/webflow.ts";
 
 export interface WebflowServiceConfig {
   apiToken: string;
@@ -24,7 +28,6 @@ export interface WebflowSlugCheckResult {
   itemId?: string;
 }
 
-
 export class WebflowService {
   private readonly config: WebflowServiceConfig;
   private readonly baseUrl: string;
@@ -35,7 +38,7 @@ export class WebflowService {
     this.config = config;
     this.baseUrl = config.baseUrl || "https://api.webflow.com/v2";
     this.timeout = config.timeout || 30000;
-    
+
     // Initialize retry handler with circuit breaker
     this.retryHandler = createWebflowRetryHandler({
       name: "webflow-api",
@@ -56,14 +59,16 @@ export class WebflowService {
   /**
    * Get collection items with optional filtering and pagination
    */
-  async getCollectionItems(options: WebflowQueryOptions = {}): Promise<WebflowListResponse<WebflowCollectionItem>> {
+  async getCollectionItems(
+    options: WebflowQueryOptions = {},
+  ): Promise<WebflowListResponse<WebflowCollectionItem>> {
     const url = new URL(`${this.baseUrl}/collections/${this.config.collectionId}/items`);
-    
+
     // Add query parameters
     if (options.limit) url.searchParams.set("limit", options.limit.toString());
     if (options.offset) url.searchParams.set("offset", options.offset);
     if (options.sort) {
-      options.sort.forEach(sort => url.searchParams.append("sort", sort));
+      options.sort.forEach((sort) => url.searchParams.append("sort", sort));
     }
     if (options.filter) {
       Object.entries(options.filter).forEach(([key, value]) => {
@@ -72,14 +77,15 @@ export class WebflowService {
     }
 
     const response = await this.retryHandler.execute(
-      () => this.makeRequest<WebflowListResponse<WebflowCollectionItem>>(url.toString(), {
-        method: "GET",
-      }),
+      () =>
+        this.makeRequest<WebflowListResponse<WebflowCollectionItem>>(url.toString(), {
+          method: "GET",
+        }),
       {
         operation: "getCollectionItems",
         collectionId: this.config.collectionId,
         options,
-      }
+      },
     );
 
     logger.info("Retrieved collection items", {
@@ -103,15 +109,16 @@ export class WebflowService {
     }
 
     const response = await this.retryHandler.execute(
-      () => this.makeRequest<WebflowCollectionItem>(url, {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+      () =>
+        this.makeRequest<WebflowCollectionItem>(url, {
+          method: "POST",
+          body: JSON.stringify(data),
+        }),
       {
         operation: "createCollectionItem",
         collectionId: this.config.collectionId,
         slug: data.fieldData.slug,
-      }
+      },
     );
 
     logger.info("Created collection item", {
@@ -130,15 +137,16 @@ export class WebflowService {
     const url = `${this.baseUrl}/collections/${this.config.collectionId}/items/${itemId}/publish`;
 
     await this.retryHandler.execute(
-      () => this.makeRequest<void>(url, {
-        method: "POST",
-        body: JSON.stringify({}),
-      }),
+      () =>
+        this.makeRequest<void>(url, {
+          method: "POST",
+          body: JSON.stringify({}),
+        }),
       {
         operation: "publishItem",
         collectionId: this.config.collectionId,
         itemId,
-      }
+      },
     );
 
     logger.info("Published collection item", {
@@ -158,7 +166,7 @@ export class WebflowService {
       });
 
       // Find exact slug match
-      const exactMatch = response.items?.find((item: WebflowCollectionItem) => 
+      const exactMatch = response.items?.find((item: WebflowCollectionItem) =>
         item.fieldData.slug === slug
       );
 
@@ -203,7 +211,10 @@ export class WebflowService {
   /**
    * Update an existing collection item
    */
-  async updateCollectionItem(itemId: string, data: WebflowCreateItemRequest): Promise<WebflowCollectionItem> {
+  async updateCollectionItem(
+    itemId: string,
+    data: WebflowCreateItemRequest,
+  ): Promise<WebflowCollectionItem> {
     const url = `${this.baseUrl}/collections/${this.config.collectionId}/items/${itemId}`;
 
     const response = await this.makeRequest<WebflowCollectionItem>(url, {
@@ -336,12 +347,12 @@ export class WebflowService {
     });
 
     const webflowError = parseWebflowError(response, responseBody);
-    
+
     // Log the structured error
     logger.error("Parsed Webflow error", {
       error: webflowError,
     });
-    
+
     throw webflowError;
   }
 }

@@ -41,7 +41,7 @@ export interface IntroTextResult {
  */
 export function extractIntroText(
   htmlContent: string,
-  options: IntroTextOptions = {}
+  options: IntroTextOptions = {},
 ): IntroTextResult {
   const {
     maxLength = CONFIG.MAX_LENGTH,
@@ -53,10 +53,10 @@ export function extractIntroText(
   try {
     // Get text content with proper spacing preserved
     const plainText = getTextContent(htmlContent);
-    
+
     // Normalize whitespace
     const normalizedText = normalizeWhitespace(plainText);
-    
+
     // Handle empty or short content
     if (!normalizedText || normalizedText.length <= maxLength) {
       return {
@@ -107,7 +107,7 @@ export function extractIntroText(
       error: error instanceof Error ? error : new Error(String(error)),
       htmlLength: htmlContent.length,
     });
-    
+
     // Return empty result on error
     return {
       text: "",
@@ -210,7 +210,7 @@ function cleanEnding(text: string): string {
  */
 export function extractIntroFromPlainText(
   plainText: string,
-  options: IntroTextOptions = {}
+  options: IntroTextOptions = {},
 ): IntroTextResult {
   const normalizedText = normalizeWhitespace(plainText);
   const {
@@ -249,7 +249,7 @@ export function extractIntroFromPlainText(
 export function isValidIntroContent(htmlContent: string): boolean {
   const plainText = getTextContent(htmlContent);
   const normalized = normalizeWhitespace(plainText);
-  
+
   // Check if we have meaningful text content
   return normalized.length >= CONFIG.MIN_LENGTH_FOR_ELLIPSIS;
 }
@@ -259,19 +259,19 @@ export function isValidIntroContent(htmlContent: string): boolean {
  */
 export function createFallbackIntro(title: string, author?: string): string {
   const parts = [];
-  
+
   if (title) {
     parts.push(title);
   }
-  
+
   if (author) {
     parts.push(`by ${author}`);
   }
-  
+
   if (parts.length === 0) {
     return "Read more...";
   }
-  
+
   const fallback = parts.join(" ");
   return extractIntroFromPlainText(fallback).text;
 }

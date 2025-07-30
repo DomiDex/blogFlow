@@ -3,21 +3,21 @@
 import { assertEquals, assertInstanceOf } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
 import {
-  WebflowError,
-  WebflowAuthError,
-  WebflowValidationError,
-  WebflowRateLimitError,
-  WebflowNotFoundError,
-  WebflowServerError,
-  WebflowNetworkError,
-  WebflowErrorCode,
-  parseWebflowError,
-  parseNetworkError,
-  isWebflowError,
-  isRetryableError,
-  getUserFriendlyMessage,
   getErrorRecoveryStrategy,
+  getUserFriendlyMessage,
+  isRetryableError,
+  isWebflowError,
+  parseNetworkError,
+  parseWebflowError,
+  WebflowAuthError,
+  WebflowError,
+  WebflowErrorCode,
+  WebflowNetworkError,
+  WebflowNotFoundError,
+  WebflowRateLimitError,
   type WebflowRateLimitInfo,
+  WebflowServerError,
+  WebflowValidationError,
 } from "@utils/webflowErrors.ts";
 
 describe("WebflowErrors", () => {
@@ -119,7 +119,7 @@ describe("WebflowErrors", () => {
     it("should create forbidden error with 403 status", () => {
       const error = new WebflowAuthError(
         "Insufficient permissions",
-        WebflowErrorCode.FORBIDDEN
+        WebflowErrorCode.FORBIDDEN,
       );
 
       assertEquals(error.code, WebflowErrorCode.FORBIDDEN);
@@ -130,7 +130,7 @@ describe("WebflowErrors", () => {
       const error = new WebflowAuthError(
         "Missing required scopes: cms:write",
         WebflowErrorCode.MISSING_SCOPES,
-        { requiredScopes: ["cms:write"] }
+        { requiredScopes: ["cms:write"] },
       );
 
       assertEquals(error.code, WebflowErrorCode.MISSING_SCOPES);
@@ -148,7 +148,7 @@ describe("WebflowErrors", () => {
 
       const error = new WebflowValidationError(
         "Validation failed",
-        fieldErrors
+        fieldErrors,
       );
 
       assertEquals(error.message, "Validation failed");
@@ -211,7 +211,7 @@ describe("WebflowErrors", () => {
       assertEquals(error.rateLimitInfo, rateLimitInfo);
       assertEquals(
         error.message.includes("Rate limit exceeded"),
-        true
+        true,
       );
     });
   });
@@ -344,7 +344,7 @@ describe("WebflowErrors", () => {
     });
 
     it("should parse 500+ server errors", () => {
-      const response = new Response(null, { 
+      const response = new Response(null, {
         status: 503,
         statusText: "Service Unavailable",
       });
@@ -357,7 +357,7 @@ describe("WebflowErrors", () => {
     });
 
     it("should parse unknown 4xx errors", () => {
-      const response = new Response(null, { 
+      const response = new Response(null, {
         status: 418,
         statusText: "I'm a teapot",
       });
@@ -399,7 +399,7 @@ describe("WebflowErrors", () => {
       assertInstanceOf(error, WebflowNetworkError);
       assertEquals(
         error.message,
-        "Request timeout - Webflow API took too long to respond"
+        "Request timeout - Webflow API took too long to respond",
       );
     });
 
@@ -475,7 +475,8 @@ describe("WebflowErrors", () => {
         },
         {
           error: new WebflowAuthError("Missing scopes", WebflowErrorCode.MISSING_SCOPES),
-          expected: "Your API token is missing required permissions. Please regenerate your token with the necessary scopes.",
+          expected:
+            "Your API token is missing required permissions. Please regenerate your token with the necessary scopes.",
         },
         {
           error: new WebflowRateLimitError({
@@ -499,11 +500,13 @@ describe("WebflowErrors", () => {
         },
         {
           error: new WebflowServerError("Server error"),
-          expected: "Webflow service is temporarily unavailable. Please try again in a few minutes.",
+          expected:
+            "Webflow service is temporarily unavailable. Please try again in a few minutes.",
         },
         {
           error: new WebflowNetworkError("Network error"),
-          expected: "Network connection error. Please check your internet connection and try again.",
+          expected:
+            "Network connection error. Please check your internet connection and try again.",
         },
       ];
 
@@ -530,12 +533,12 @@ describe("WebflowErrors", () => {
 
       assertEquals(
         getUserFriendlyMessage(duplicateSlugError),
-        "This URL slug is already in use. Please choose a different one."
+        "This URL slug is already in use. Please choose a different one.",
       );
 
       assertEquals(
         getUserFriendlyMessage(contentTooLargeError),
-        "The content is too large. Please reduce the size and try again."
+        "The content is too large. Please reduce the size and try again.",
       );
     });
   });

@@ -11,13 +11,17 @@ import { assertEquals, assertThrows } from "@std/assert";
  */
 export function createMockFetch(responses: Map<string, Response>) {
   return (input: string | Request | URL, _init?: RequestInit): Promise<Response> => {
-    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    const url = typeof input === "string"
+      ? input
+      : input instanceof URL
+      ? input.toString()
+      : input.url;
     const response = responses.get(url);
-    
+
     if (!response) {
       return Promise.reject(new Error(`No mock response for URL: ${url}`));
     }
-    
+
     return Promise.resolve(response.clone());
   };
 }
@@ -27,16 +31,16 @@ export function createMockFetch(responses: Map<string, Response>) {
  */
 export function createMockResponse(
   body: unknown,
-  init: ResponseInit = {}
+  init: ResponseInit = {},
 ): Response {
   const jsonBody = typeof body === "string" ? body : JSON.stringify(body);
-  
+
   return new Response(jsonBody, {
     status: 200,
     headers: {
       "content-type": "application/json",
       ...Object.fromEntries(
-        Object.entries(init.headers || {}).map(([k, v]) => [k.toLowerCase(), v])
+        Object.entries(init.headers || {}).map(([k, v]) => [k.toLowerCase(), v]),
       ),
     },
     ...init,
@@ -49,7 +53,7 @@ export function createMockResponse(
 export async function assertAsyncThrows(
   fn: () => Promise<unknown>,
   errorClass?: new (...args: unknown[]) => Error,
-  msgIncludes?: string
+  msgIncludes?: string,
 ): Promise<void> {
   try {
     await fn();
@@ -59,7 +63,9 @@ export async function assertAsyncThrows(
       throw new Error(`Expected ${errorClass.name} but got ${(error as any).constructor.name}`);
     }
     if (msgIncludes && error instanceof Error && !error.message.includes(msgIncludes)) {
-      throw new Error(`Expected error message to include "${msgIncludes}" but got "${error.message}"`);
+      throw new Error(
+        `Expected error message to include "${msgIncludes}" but got "${error.message}"`,
+      );
     }
   }
 }
@@ -68,27 +74,27 @@ export async function assertAsyncThrows(
  * Create a spy function that tracks calls
  */
 export function createSpy<T extends (...args: unknown[]) => unknown>(
-  fn?: T
+  fn?: T,
 ): T & { calls: unknown[][]; callCount: number; reset: () => void } {
   const calls: unknown[][] = [];
-  
+
   const spy = ((...args: unknown[]) => {
     calls.push(args);
     return fn?.(...args);
   }) as T & { calls: unknown[][]; callCount: number; reset: () => void };
-  
+
   Object.defineProperty(spy, "calls", {
     get: () => calls,
   });
-  
+
   Object.defineProperty(spy, "callCount", {
     get: () => calls.length,
   });
-  
+
   spy.reset = () => {
     calls.length = 0;
   };
-  
+
   return spy;
 }
 
@@ -148,17 +154,17 @@ export class FakeTime {
 
   advance(ms: number): void {
     const targetTime = this.currentTime + ms;
-    
+
     while (this.currentTime < targetTime) {
       const nextTimer = Array.from(this.timers.entries())
         .filter(([_, timer]) => timer.time <= targetTime)
         .sort((a, b) => a[1].time - b[1].time)[0];
-      
+
       if (!nextTimer) {
         this.currentTime = targetTime;
         break;
       }
-      
+
       const [id, timer] = nextTimer;
       this.currentTime = timer.time;
       this.timers.delete(id);

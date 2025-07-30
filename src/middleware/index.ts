@@ -1,10 +1,10 @@
 /// <reference lib="deno.ns" />
 import type { Hono } from "@hono/hono";
 import { corsMiddleware } from "./cors.ts";
-import { securityMiddleware, requestValidation } from "./security.ts";
+import { requestValidation, securityMiddleware } from "./security.ts";
 import { requestLogger } from "./requestLogger.ts";
 import { errorHandler } from "./errorHandler.ts";
-import { rateLimiter, formRateLimiter, createWhitelistSkip } from "./rateLimiter.ts";
+import { createWhitelistSkip, formRateLimiter, rateLimiter } from "./rateLimiter.ts";
 import type { Variables } from "@app-types";
 import { config as appConfig } from "@config/index.ts";
 
@@ -17,8 +17,8 @@ export interface MiddlewareConfig {
  * Order matters: error handler -> request logger -> security -> rate limit -> validation -> cors -> routes
  */
 export function registerMiddleware(
-  app: Hono<{ Variables: Variables }>, 
-  config?: MiddlewareConfig
+  app: Hono<{ Variables: Variables }>,
+  config?: MiddlewareConfig,
 ): void {
   // Error handler middleware (must wrap all routes)
   app.use("*", errorHandler());
@@ -27,17 +27,23 @@ export function registerMiddleware(
   app.use("*", requestLogger());
 
   // Security headers middleware (early to protect all endpoints)
-  app.use("*", securityMiddleware({
-    enableNonce: false, // Can be enabled for stricter CSP
-    enableCSP: true,
-    enableHSTS: appConfig.NODE_ENV === "production",
-  }));
+  app.use(
+    "*",
+    securityMiddleware({
+      enableNonce: false, // Can be enabled for stricter CSP
+      enableCSP: true,
+      enableHSTS: appConfig.NODE_ENV === "production",
+    }),
+  );
 
   // Global rate limiting (before CORS to prevent abuse)
   if (!config?.testing) {
-    app.use("*", rateLimiter({
-      skip: appConfig.NODE_ENV === "development" ? createWhitelistSkip() : undefined,
-    }));
+    app.use(
+      "*",
+      rateLimiter({
+        skip: appConfig.NODE_ENV === "development" ? createWhitelistSkip() : undefined,
+      }),
+    );
 
     // Specific rate limiting for form endpoints
     app.use("/api/webflow-form", formRateLimiter);

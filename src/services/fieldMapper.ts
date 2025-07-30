@@ -16,16 +16,16 @@ export interface WebflowFieldData {
   slug: string;
   "reading-time": string;
   "intro-text": string;
-  
+
   // System fields
   _archived: boolean;
   _draft: boolean;
-  
+
   // Timestamps
   "created-on"?: string;
   "updated-on"?: string;
   "published-on"?: string;
-  
+
   // Optional fields
   "featured-image"?: string;
   categories?: string[];
@@ -52,7 +52,7 @@ const FIELD_MAPPING = {
   articleTitle: "name",
   metaDescription: "meta-description",
   articleContent: "post", // This will be HTML, not Delta
-  
+
   // Metadata mappings
   slug: "slug",
   readingTime: "reading-time",
@@ -60,7 +60,7 @@ const FIELD_MAPPING = {
   createdOn: "created-on",
   updatedOn: "updated-on",
   publishedOn: "published-on",
-  
+
   // Optional field mappings
   featuredImage: "featured-image",
   categories: "categories",
@@ -103,7 +103,7 @@ export function mapToWebflowFields(
   options: {
     isUpdate?: boolean;
     includeOptionalFields?: boolean;
-  } = {}
+  } = {},
 ): WebflowCmsItem {
   const { isUpdate = false, includeOptionalFields = true } = options;
 
@@ -125,7 +125,7 @@ export function mapToWebflowFields(
     fieldData["created-on"] = metadata.createdOn;
   }
   fieldData["updated-on"] = metadata.updatedOn;
-  
+
   if (metadata.publishedOn) {
     fieldData["published-on"] = metadata.publishedOn;
   }
@@ -193,7 +193,7 @@ export function transformFieldValue(value: unknown, fieldName: string): unknown 
   // Array fields
   if (fieldName === "categories" || fieldName === "tags") {
     if (Array.isArray(value)) {
-      return value.filter(v => typeof v === "string" && v.trim() !== "");
+      return value.filter((v) => typeof v === "string" && v.trim() !== "");
     }
     return [];
   }
@@ -229,7 +229,7 @@ function validateFieldLengths(fieldData: Partial<WebflowFieldData>): void {
         `Field '${field}' exceeds maximum length of ${limit} characters`,
         field,
         value,
-        { actualLength: value.length, maxLength: limit }
+        { actualLength: value.length, maxLength: limit },
       );
     }
   }
@@ -253,7 +253,7 @@ function validateRequiredFields(fieldData: WebflowFieldData): void {
       `Missing required fields: ${missingFields.join(", ")}`,
       "fieldData",
       fieldData,
-      { missingFields }
+      { missingFields },
     );
   }
 }
@@ -263,13 +263,13 @@ function validateRequiredFields(fieldData: WebflowFieldData): void {
  */
 export function createPartialUpdate(
   currentData: WebflowFieldData,
-  newData: Partial<WebflowFieldData>
+  newData: Partial<WebflowFieldData>,
 ): Partial<WebflowFieldData> {
   const updates: Partial<WebflowFieldData> = {};
 
   for (const [key, newValue] of Object.entries(newData)) {
     const currentValue = currentData[key as keyof WebflowFieldData];
-    
+
     // Check if value has changed
     if (JSON.stringify(currentValue) !== JSON.stringify(newValue)) {
       // Type-safe assignment using proper type assertion
@@ -300,7 +300,7 @@ export function isValidWebflowField(fieldName: string): boolean {
     "_archived",
     "_draft",
   ]);
-  
+
   return validFields.has(fieldName);
 }
 

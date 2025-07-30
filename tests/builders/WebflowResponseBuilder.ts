@@ -1,6 +1,10 @@
 /// <reference lib="deno.ns" />
 
-import type { WebflowCollectionItem, WebflowApiError, WebflowListResponse } from "@/types/webflow.ts";
+import type {
+  WebflowApiError,
+  WebflowCollectionItem,
+  WebflowListResponse,
+} from "@/types/webflow.ts";
 
 /**
  * Builder for creating mock Webflow API responses
@@ -12,7 +16,7 @@ export class WebflowResponseBuilder {
   static item(overrides?: Partial<WebflowCollectionItem>): WebflowCollectionItem {
     const id = this.generateId();
     const now = new Date().toISOString();
-    
+
     return {
       id,
       cmsLocaleId: this.generateId(),
@@ -37,7 +41,7 @@ export class WebflowResponseBuilder {
       ...overrides,
     };
   }
-  
+
   /**
    * Create a published item
    */
@@ -53,7 +57,7 @@ export class WebflowResponseBuilder {
       ...overrides,
     });
   }
-  
+
   /**
    * Create an error response
    */
@@ -98,14 +102,16 @@ export class WebflowResponseBuilder {
         code: "SERVICE_UNAVAILABLE",
       },
     };
-    
+
     return errors[status] || errors[500];
   }
-  
+
   /**
    * Create a collection list response
    */
-  static collection(items: WebflowCollectionItem[] = []): WebflowListResponse<WebflowCollectionItem> {
+  static collection(
+    items: WebflowCollectionItem[] = [],
+  ): WebflowListResponse<WebflowCollectionItem> {
     return {
       items,
       pagination: {
@@ -115,18 +121,18 @@ export class WebflowResponseBuilder {
       },
     };
   }
-  
+
   /**
    * Create a paginated collection response
    */
   static paginatedCollection(
     items: WebflowCollectionItem[],
     page: number = 1,
-    limit: number = 100
+    limit: number = 100,
   ): WebflowListResponse<WebflowCollectionItem> {
     const offset = (page - 1) * limit;
     const paginatedItems = items.slice(offset, offset + limit);
-    
+
     return {
       items: paginatedItems,
       pagination: {
@@ -136,12 +142,12 @@ export class WebflowResponseBuilder {
       },
     };
   }
-  
+
   /**
    * Create multiple items with incrementing data
    */
   static items(count: number, isDraft: boolean = true): WebflowCollectionItem[] {
-    return Array.from({ length: count }, (_, i) => 
+    return Array.from({ length: count }, (_, i) =>
       this.item({
         isDraft,
         fieldData: {
@@ -150,10 +156,9 @@ export class WebflowResponseBuilder {
           slug: `test-article-${i + 1}`,
           "author-name": `Author ${i + 1}`,
         },
-      })
-    );
+      }));
   }
-  
+
   /**
    * Create a success response for operations
    */
@@ -163,7 +168,7 @@ export class WebflowResponseBuilder {
       message,
     };
   }
-  
+
   /**
    * Create a publish response
    */
@@ -172,7 +177,7 @@ export class WebflowResponseBuilder {
       publishedItemIds: [itemId],
     };
   }
-  
+
   /**
    * Create an update response
    */
@@ -186,7 +191,7 @@ export class WebflowResponseBuilder {
       },
     };
   }
-  
+
   /**
    * Generate a realistic Webflow ID
    */
@@ -198,17 +203,17 @@ export class WebflowResponseBuilder {
     }
     return id;
   }
-  
+
   /**
    * Create a rate limit headers object
    */
   static rateLimitHeaders(
     limit: number = 60,
     remaining: number = 59,
-    resetTime?: Date
+    resetTime?: Date,
   ): Record<string, string> {
     const reset = resetTime || new Date(Date.now() + 60000);
-    
+
     return {
       "X-RateLimit-Limit": limit.toString(),
       "X-RateLimit-Remaining": remaining.toString(),

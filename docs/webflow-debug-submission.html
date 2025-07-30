@@ -1,0 +1,123 @@
+<!-- Debug Version - Add this AFTER your existing code to see what's happening -->
+<script>
+// Debug helper
+window.BlogFlowDebug = {
+  checkForm: function() {
+    console.log('=== FORM DEBUG ===');
+    
+    var form = document.querySelector('form');
+    if (!form) {
+      console.error('No form found!');
+      return;
+    }
+    
+    console.log('Form found:', form);
+    console.log('Form action:', form.action);
+    console.log('Form method:', form.method);
+    
+    // Check all inputs
+    var inputs = form.querySelectorAll('input, textarea, select');
+    console.log('\nForm inputs:');
+    inputs.forEach(function(input) {
+      if (input.name && !input.name.startsWith('_')) {
+        console.log('- ' + input.name + ':', input.value);
+      }
+    });
+    
+    // Check Quill
+    var editor = document.getElementById('editor');
+    console.log('\nQuill editor element:', editor ? 'Found' : 'Not found');
+    
+    if (window.Quill && editor) {
+      try {
+        var quillInstance = Quill.find(editor);
+        if (quillInstance) {
+          console.log('Quill instance found');
+          console.log('Quill content:', quillInstance.getText());
+        }
+      } catch (e) {
+        console.log('Quill not initialized');
+      }
+    }
+    
+    // Check submit button
+    var submitBtn = form.querySelector('[type="submit"]');
+    console.log('\nSubmit button:', submitBtn ? 'Found' : 'Not found');
+    
+    BlogFlowToast.info('Debug', 'Check console for form details', 5000);
+  },
+  
+  testSubmit: function() {
+    console.log('=== TEST SUBMIT ===');
+    
+    var form = document.querySelector('form');
+    if (!form) {
+      BlogFlowToast.error('Error', 'No form found', 5000);
+      return;
+    }
+    
+    // Collect test data
+    var testData = {
+      authorName: 'Test Author',
+      articleTitle: 'Test Article Title',
+      metaDescription: 'This is a test meta description that is definitely longer than 50 characters to pass validation',
+      articleContent: {
+        ops: [{ insert: 'This is test content. '.repeat(20) }]
+      },
+      authorEmail: 'test@' + window.location.hostname,
+      tags: ['test'],
+      categories: ['Test'],
+      publishNow: false
+    };
+    
+    console.log('Sending test data:', testData);
+    BlogFlowToast.info('Testing', 'Sending test submission...', 0);
+    
+    // Make request
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', 'https://dominiquede-blogflow-62.deno.dev/api/webflow-form', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    
+    xhr.onload = function() {
+      document.querySelectorAll('.blogflow-toast').forEach(function(t) { t.remove(); });
+      
+      console.log('Response status:', xhr.status);
+      console.log('Response text:', xhr.responseText);
+      
+      try {
+        var response = JSON.parse(xhr.responseText);
+        if (xhr.status === 200 && response.success) {
+          BlogFlowToast.success('Test Success', 'API is working correctly!', 0);
+        } else {
+          BlogFlowToast.error('Test Failed', response.message || 'Unknown error', 0);
+        }
+      } catch (e) {
+        BlogFlowToast.error('Parse Error', 'Invalid response', 5000);
+      }
+    };
+    
+    xhr.onerror = function() {
+      document.querySelectorAll('.blogflow-toast').forEach(function(t) { t.remove(); });
+      BlogFlowToast.error('Network Error', 'Could not reach API', 5000);
+    };
+    
+    xhr.send(JSON.stringify(testData));
+  }
+};
+
+// Add debug buttons
+window.addEventListener('load', function() {
+  setTimeout(function() {
+    // Create debug panel
+    var debugPanel = document.createElement('div');
+    debugPanel.style.cssText = 'position: fixed; bottom: 20px; left: 20px; background: #f3f4f6; padding: 15px; border-radius: 8px; z-index: 9999; box-shadow: 0 2px 10px rgba(0,0,0,0.1);';
+    debugPanel.innerHTML = 
+      '<div style="font-weight: bold; margin-bottom: 10px;">BlogFlow Debug</div>' +
+      '<button onclick="BlogFlowDebug.checkForm()" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; margin: 5px; border-radius: 4px; cursor: pointer;">Check Form</button>' +
+      '<button onclick="BlogFlowDebug.testSubmit()" style="background: #10b981; color: white; border: none; padding: 8px 16px; margin: 5px; border-radius: 4px; cursor: pointer;">Test API</button>' +
+      '<button onclick="this.parentElement.remove()" style="background: #ef4444; color: white; border: none; padding: 8px 16px; margin: 5px; border-radius: 4px; cursor: pointer;">Close</button>';
+    
+    document.body.appendChild(debugPanel);
+  }, 2000);
+});
+</script>

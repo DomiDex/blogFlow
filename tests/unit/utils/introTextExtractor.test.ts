@@ -1,17 +1,21 @@
 import { assertEquals, assertExists } from "@std/testing/asserts";
 import {
-  extractIntroText,
-  extractIntroFromPlainText,
-  isValidIntroContent,
   createFallbackIntro,
+  extractIntroFromPlainText,
+  extractIntroText,
   type IntroTextResult,
+  isValidIntroContent,
 } from "@/utils/introTextExtractor.ts";
 
 Deno.test("extractIntroText - basic HTML content", () => {
-  const html = "<p>This is a test article about extracting intro text from HTML content. It should handle various HTML tags properly.</p>";
+  const html =
+    "<p>This is a test article about extracting intro text from HTML content. It should handle various HTML tags properly.</p>";
   const result = extractIntroText(html);
-  
-  assertEquals(result.text, "This is a test article about extracting intro text from HTML content. It should handle various HTML tags properly.");
+
+  assertEquals(
+    result.text,
+    "This is a test article about extracting intro text from HTML content. It should handle various HTML tags properly.",
+  );
   assertEquals(result.truncated, false);
   assertEquals(result.length, 114);
 });
@@ -23,7 +27,7 @@ Deno.test("extractIntroText - long content with truncation", () => {
     an ellipsis is added at the end.</p>
   `;
   const result = extractIntroText(html);
-  
+
   assertExists(result.text);
   assertEquals(result.truncated, true);
   assertEquals(result.text.endsWith("..."), true);
@@ -37,7 +41,7 @@ Deno.test("extractIntroText - multiple paragraphs", () => {
     <p>Third paragraph that definitely won't be included.</p>
   `;
   const result = extractIntroText(html);
-  
+
   // With getTextContent, the paragraphs are concatenated without spaces, making it shorter than 160 chars
   assertEquals(result.truncated, false);
   assertEquals(result.text.includes("First paragraph"), true);
@@ -45,18 +49,23 @@ Deno.test("extractIntroText - multiple paragraphs", () => {
 });
 
 Deno.test("extractIntroText - preserve sentences", () => {
-  const html = "<p>This is the first sentence. This is the second sentence. This is the third sentence that is quite long and will exceed our character limit for sure.</p>";
+  const html =
+    "<p>This is the first sentence. This is the second sentence. This is the third sentence that is quite long and will exceed our character limit for sure.</p>";
   const result = extractIntroText(html, { preserveSentences: true });
-  
+
   // The full text is 148 chars, which is under 160, so it won't truncate
-  assertEquals(result.text, "This is the first sentence. This is the second sentence. This is the third sentence that is quite long and will exceed our character limit for sure.");
+  assertEquals(
+    result.text,
+    "This is the first sentence. This is the second sentence. This is the third sentence that is quite long and will exceed our character limit for sure.",
+  );
   assertEquals(result.truncated, false);
 });
 
 Deno.test("extractIntroText - with special HTML entities", () => {
-  const html = "<p>This article discusses &quot;quotes&quot; &amp; special characters like &lt; and &gt;.</p>";
+  const html =
+    "<p>This article discusses &quot;quotes&quot; &amp; special characters like &lt; and &gt;.</p>";
   const result = extractIntroText(html);
-  
+
   assertEquals(result.text.includes('"quotes"'), true);
   assertEquals(result.text.includes("&"), true);
   assertEquals(result.text.includes("<"), true);
@@ -71,7 +80,7 @@ Deno.test("extractIntroText - with code blocks", () => {
     <p>This is more content after the code.</p>
   `;
   const result = extractIntroText(html);
-  
+
   assertEquals(result.text.includes("Here's how to use the function"), true);
   assertEquals(result.text.includes("const result"), true);
 });
@@ -86,7 +95,7 @@ Deno.test("extractIntroText - with lists", () => {
     </ul>
   `;
   const result = extractIntroText(html);
-  
+
   assertEquals(result.text.includes("Key features include"), true);
   assertEquals(result.text.includes("Feature"), true);
 });
@@ -110,32 +119,34 @@ Deno.test("extractIntroText - whitespace normalization", () => {
     too.</p>
   `;
   const result = extractIntroText(html);
-  
+
   assertEquals(result.text.includes("  "), false); // No double spaces
   assertEquals(result.text.includes("\n"), false); // No newlines
   assertEquals(result.text.includes("This has multiple spaces"), true);
 });
 
 Deno.test("extractIntroText - custom options", () => {
-  const html = "<p>This is a test of custom options for the intro text extractor with a reasonably long sentence.</p>";
-  
+  const html =
+    "<p>This is a test of custom options for the intro text extractor with a reasonably long sentence.</p>";
+
   // Custom max length
   const result1 = extractIntroText(html, { maxLength: 50 });
   assertEquals(result1.length <= 53, true); // 50 + ellipsis
   assertEquals(result1.truncated, true);
-  
+
   // No ellipsis
   const result2 = extractIntroText(html, { maxLength: 50, addEllipsis: false });
   assertEquals(result2.text.endsWith("..."), false);
   assertEquals(result2.length <= 50, true);
-  
+
   // Custom ellipsis
   const result3 = extractIntroText(html, { maxLength: 50, customEllipsis: " →" });
   assertEquals(result3.text.endsWith(" →"), true);
 });
 
 Deno.test("extractIntroText - clean ending", () => {
-  const html1 = "<p>This text ends with a comma, and then gets cut off in the middle of something</p>";
+  const html1 =
+    "<p>This text ends with a comma, and then gets cut off in the middle of something</p>";
   const result1 = extractIntroText(html1, { maxLength: 30 });
   assertEquals(result1.text.endsWith(","), false); // Comma should be removed
   assertEquals(result1.text.endsWith("..."), true);
@@ -148,15 +159,16 @@ Deno.test("extractIntroText - clean ending", () => {
 Deno.test("extractIntroFromPlainText - basic usage", () => {
   const text = "This is plain text without any HTML tags.";
   const result = extractIntroFromPlainText(text);
-  
+
   assertEquals(result.text, text);
   assertEquals(result.truncated, false);
 });
 
 Deno.test("extractIntroFromPlainText - with truncation", () => {
-  const text = "This is a very long piece of plain text that will definitely need to be truncated because it exceeds our maximum character limit by quite a significant margin.";
+  const text =
+    "This is a very long piece of plain text that will definitely need to be truncated because it exceeds our maximum character limit by quite a significant margin.";
   const result = extractIntroFromPlainText(text);
-  
+
   // The text is 159 characters, so it won't be truncated
   assertEquals(result.truncated, false);
   assertEquals(result.text.endsWith("..."), false);
@@ -174,18 +186,19 @@ Deno.test("isValidIntroContent - various inputs", () => {
 Deno.test("createFallbackIntro - various scenarios", () => {
   const result1 = createFallbackIntro("My Article Title");
   assertEquals(result1, "My Article Title");
-  
+
   const result2 = createFallbackIntro("My Article Title", "John Doe");
   assertEquals(result2, "My Article Title by John Doe");
-  
+
   const result3 = createFallbackIntro("", "John Doe");
   assertEquals(result3, "by John Doe");
-  
+
   const result4 = createFallbackIntro("", "");
   assertEquals(result4, "Read more...");
-  
+
   // Long title that needs truncation
-  const longTitle = "This is an extremely long article title that will definitely need to be truncated when used as a fallback intro text because it exceeds the maximum allowed length";
+  const longTitle =
+    "This is an extremely long article title that will definitely need to be truncated when used as a fallback intro text because it exceeds the maximum allowed length";
   const result5 = createFallbackIntro(longTitle);
   assertEquals(result5.endsWith("..."), true);
   assertEquals(result5.length <= 163, true);
@@ -199,7 +212,7 @@ Deno.test("extractIntroText - media only content", () => {
     </figure>
   `;
   const result = extractIntroText(html);
-  
+
   assertEquals(result.text, "Image caption");
   assertEquals(result.truncated, false);
 });
@@ -211,7 +224,7 @@ Deno.test("extractIntroText - mixed content types", () => {
     <p>This is the actual article content that we want to extract for the intro text.</p>
   `;
   const result = extractIntroText(html);
-  
+
   assertEquals(result.text.includes("Article Title"), true);
   assertEquals(result.text.includes("John Doe"), true);
   assertEquals(result.text.includes("actual article content"), true);
@@ -222,12 +235,12 @@ Deno.test("extractIntroText - word boundary edge cases", () => {
   const html1 = "<p>This is a well-thought-out article about modern web development practices.</p>";
   const result1 = extractIntroText(html1, { maxLength: 30 });
   assertEquals(result1.text.includes("well-thought-out"), true);
-  
+
   // Test with URLs
   const html2 = "<p>Visit https://example.com/very/long/url/that/might/get/truncated for more.</p>";
   const result2 = extractIntroText(html2, { maxLength: 40 });
   assertEquals(result2.truncated, true);
-  
+
   // Test with numbers
   const html3 = "<p>The year 2024 marks the 25th anniversary of our company's founding.</p>";
   const result3 = extractIntroText(html3, { maxLength: 35 });
@@ -237,7 +250,7 @@ Deno.test("extractIntroText - word boundary edge cases", () => {
 Deno.test("extractIntroText - unicode and special characters", () => {
   const html = "<p>Testing émojis 🚀 and spëcial cháracters in the intro text.</p>";
   const result = extractIntroText(html);
-  
+
   assertEquals(result.text.includes("émojis"), true);
   assertEquals(result.text.includes("🚀"), true);
   assertEquals(result.text.includes("spëcial"), true);
@@ -245,11 +258,11 @@ Deno.test("extractIntroText - unicode and special characters", () => {
 
 Deno.test("extractIntroText - performance with large content", () => {
   const largeHtml = "<p>" + "This is a sentence. ".repeat(1000) + "</p>";
-  
+
   const start = performance.now();
   const result = extractIntroText(largeHtml);
   const end = performance.now();
-  
+
   assertEquals(result.truncated, true);
   assertEquals(result.length <= 163, true); // 160 + ellipsis
   assertEquals(result.text.endsWith("..."), true);

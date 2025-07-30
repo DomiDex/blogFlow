@@ -1,10 +1,10 @@
 import { assertEquals, assertExists } from "@std/testing/asserts";
 import {
-  generateSlug,
-  isValidSlug,
-  generateUniqueSlug,
-  extractKeywords,
   createSlugFromKeywords,
+  extractKeywords,
+  generateSlug,
+  generateUniqueSlug,
+  isValidSlug,
   type SlugOptions,
 } from "@/utils/slugGenerator.ts";
 
@@ -61,12 +61,16 @@ Deno.test("generateSlug - multiple spaces and hyphens", () => {
 
 Deno.test("generateSlug - HTML content", () => {
   assertEquals(generateSlug("<h1>Hello World</h1>"), "hello-world");
-  assertEquals(generateSlug("Text with <strong>bold</strong> and <em>italic</em>"), "text-with-bold-and-italic");
+  assertEquals(
+    generateSlug("Text with <strong>bold</strong> and <em>italic</em>"),
+    "text-with-bold-and-italic",
+  );
   assertEquals(generateSlug("<p>Paragraph</p><p>Content</p>"), "paragraph-content");
 });
 
 Deno.test("generateSlug - max length", () => {
-  const longText = "This is a very long title that should be truncated at the specified maximum length";
+  const longText =
+    "This is a very long title that should be truncated at the specified maximum length";
   const slug = generateSlug(longText, { maxLength: 30 });
   assert(slug.length <= 30);
   assertEquals(slug, "this-is-a-very-long-title");
@@ -98,7 +102,7 @@ Deno.test("generateSlug - custom replacements", () => {
     ["C#", "csharp"],
     ["\\.NET", "dotnet"],
   ]);
-  
+
   assertEquals(generateSlug("C++ Programming", { customReplacements }), "cpp-programming");
   assertEquals(generateSlug("C# Tutorial", { customReplacements }), "csharp-tutorial");
   assertEquals(generateSlug(".NET Framework", { customReplacements }), "dotnet-framework");
@@ -110,15 +114,18 @@ Deno.test("generateSlug - complex scenarios", () => {
     removeStopWords: true,
     separator: "-",
   };
-  
+
   assertEquals(
-    generateSlug("The Ultimate Guide to Building Modern Web Applications with React.js & Next.js!", options),
-    "ultimate-guide-building-modern-web-applications"
+    generateSlug(
+      "The Ultimate Guide to Building Modern Web Applications with React.js & Next.js!",
+      options,
+    ),
+    "ultimate-guide-building-modern-web-applications",
   );
-  
+
   assertEquals(
     generateSlug("10 Tips & Tricks for $$ Making Money $$ Online in 2024", options),
-    "10-tips-tricks-dollardollar-making-money"
+    "10-tips-tricks-dollardollar-making-money",
   );
 });
 
@@ -155,7 +162,7 @@ Deno.test("generateUniqueSlug - no conflicts", () => {
 Deno.test("generateUniqueSlug - with conflicts", () => {
   const existing = ["hello-world", "hello-world-1", "hello-world-2"];
   assertEquals(generateUniqueSlug("Hello World", existing), "hello-world-3");
-  
+
   const existing2 = ["test", "test-1", "test-2", "test-3", "test-4"];
   assertEquals(generateUniqueSlug("Test", existing2), "test-5");
 });
@@ -165,13 +172,13 @@ Deno.test("generateUniqueSlug - max length with suffix", () => {
   const slug = generateUniqueSlug("Hello", existing, { maxLength: 10 });
   assertEquals(slug, "hello-1");
   assert(slug.length <= 10);
-  
+
   // Very long slug that needs truncation
   const longExisting = ["this-is-a-very-long-slug-that-exceeds"];
   const longSlug = generateUniqueSlug(
-    "This is a very long slug that exceeds the maximum", 
-    longExisting, 
-    { maxLength: 40 }
+    "This is a very long slug that exceeds the maximum",
+    longExisting,
+    { maxLength: 40 },
   );
   assert(longSlug.length <= 40);
   assert(longSlug.includes("-1"));
@@ -214,12 +221,12 @@ Deno.test("createSlugFromKeywords - basic", () => {
 Deno.test("createSlugFromKeywords - with options", () => {
   const keywords = ["JavaScript", "ES6", "Features"];
   assertEquals(
-    createSlugFromKeywords(keywords, { preserveCase: true }), 
-    "JavaScript-ES6-Features"
+    createSlugFromKeywords(keywords, { preserveCase: true }),
+    "JavaScript-ES6-Features",
   );
   assertEquals(
-    createSlugFromKeywords(keywords, { separator: "_" }), 
-    "javascript_es6_features"
+    createSlugFromKeywords(keywords, { separator: "_" }),
+    "javascript_es6_features",
   );
 });
 
@@ -229,7 +236,7 @@ Deno.test("generateSlug - performance with long text", () => {
   const start = performance.now();
   const slug = generateSlug(longText, { maxLength: 100 });
   const end = performance.now();
-  
+
   assertExists(slug);
   assert(slug.length <= 100);
   assert(end - start < 50); // Should complete in less than 50ms
@@ -238,7 +245,7 @@ Deno.test("generateSlug - performance with long text", () => {
 // Unicode edge cases
 Deno.test("generateSlug - various unicode scripts", () => {
   assertEquals(generateSlug("Hello 世界"), "hello"); // Chinese
-  assertEquals(generateSlug("مرحبا بالعالم"), ""); // Arabic (all non-ASCII)  
+  assertEquals(generateSlug("مرحبا بالعالم"), ""); // Arabic (all non-ASCII)
   assertEquals(generateSlug("Привет мир"), ""); // Cyrillic (all non-ASCII)
   assertEquals(generateSlug("Hello こんにちは"), "hello"); // Japanese
   assertEquals(generateSlug("Mixed English 한글 Text"), "mixed-english-text"); // Korean

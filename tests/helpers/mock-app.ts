@@ -15,7 +15,7 @@ export function createTestApp(): Hono<{ Variables: Variables }> {
     testing: true,
     disableRateLimiting: false, // Can test rate limiting if needed
   });
-  
+
   return app;
 }
 
@@ -25,29 +25,29 @@ export function createTestApp(): Hono<{ Variables: Variables }> {
  */
 export function setupIntegrationTest() {
   const app = createTestApp();
-  
+
   // Helper to make requests
   const request = async (
     path: string,
-    options?: RequestInit
+    options?: RequestInit,
   ): Promise<Response> => {
     return app.request(path, options);
   };
-  
+
   // Helper to make authenticated requests
   const authenticatedRequest = async (
     path: string,
-    options?: RequestInit
+    options?: RequestInit,
   ): Promise<Response> => {
     const headers = new Headers(options?.headers);
     headers.set("Authorization", "Bearer test-token");
-    
+
     return app.request(path, {
       ...options,
       headers,
     });
   };
-  
+
   return {
     app,
     request,

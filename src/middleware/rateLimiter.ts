@@ -6,31 +6,31 @@ import { config } from "@config/index.ts";
 
 // Rate limit configuration
 export interface RateLimitConfig {
-  windowMs: number;        // Time window in milliseconds
-  maxRequests: number;     // Max requests per window
-  skipSuccessfulRequests?: boolean;  // Don't count successful requests
-  skipFailedRequests?: boolean;      // Don't count failed requests
-  keyGenerator?: (c: Context) => string;  // Custom key generator
-  skip?: (c: Context) => boolean;         // Skip rate limiting for certain requests
-  handler?: (c: Context) => Response;     // Custom handler for rate limited requests
-  message?: string;        // Custom error message
+  windowMs: number; // Time window in milliseconds
+  maxRequests: number; // Max requests per window
+  skipSuccessfulRequests?: boolean; // Don't count successful requests
+  skipFailedRequests?: boolean; // Don't count failed requests
+  keyGenerator?: (c: Context) => string; // Custom key generator
+  skip?: (c: Context) => boolean; // Skip rate limiting for certain requests
+  handler?: (c: Context) => Response; // Custom handler for rate limited requests
+  message?: string; // Custom error message
 }
 
 // Default configurations for different endpoints
 export const rateLimitConfigs: Record<string, RateLimitConfig> = {
   global: {
-    windowMs: config.RATE_LIMIT_WINDOW_MS || 60000,  // 1 minute
+    windowMs: config.RATE_LIMIT_WINDOW_MS || 60000, // 1 minute
     maxRequests: config.RATE_LIMIT_MAX_REQUESTS || 60,
     message: "Too many requests, please try again later.",
   },
   api: {
-    windowMs: 60000,  // 1 minute
-    maxRequests: 30,  // Stricter for API endpoints
+    windowMs: 60000, // 1 minute
+    maxRequests: 30, // Stricter for API endpoints
     message: "API rate limit exceeded.",
   },
   form: {
-    windowMs: 300000,  // 5 minutes
-    maxRequests: 50,    // 50 form submissions per 5 minutes
+    windowMs: 300000, // 5 minutes
+    maxRequests: 50, // 50 form submissions per 5 minutes
     message: "Too many form submissions. Please wait before trying again.",
   },
 };
@@ -46,7 +46,7 @@ interface ClientInfo {
 // Sliding window log entry
 interface RequestLog {
   timestamp: number;
-  weight: number;  // For weighted rate limiting
+  weight: number; // For weighted rate limiting
 }
 
 // In-memory storage (will be replaced with Deno KV in production)
@@ -87,15 +87,15 @@ class RateLimitStore {
   addToSlidingWindow(key: string, windowMs: number, weight = 1): number {
     const now = Date.now();
     const logs = this.slidingWindowLogs.get(key) || [];
-    
+
     // Remove old entries outside the window
     const cutoff = now - windowMs;
-    const validLogs = logs.filter(log => log.timestamp > cutoff);
-    
+    const validLogs = logs.filter((log) => log.timestamp > cutoff);
+
     // Add new entry
     validLogs.push({ timestamp: now, weight });
     this.slidingWindowLogs.set(key, validLogs);
-    
+
     // Calculate total weight in window
     return validLogs.reduce((sum, log) => sum + log.weight, 0);
   }
@@ -104,12 +104,12 @@ class RateLimitStore {
   getCount(key: string, windowMs: number): number {
     const client = this.clients.get(key);
     if (!client) return 0;
-    
+
     const now = Date.now();
     if (now - client.windowStart > windowMs) {
-      return 0;  // Window expired
+      return 0; // Window expired
     }
-    
+
     return client.count;
   }
 
@@ -150,7 +150,7 @@ class RateLimitStore {
     for (const [_, client] of this.clients.entries()) {
       totalRequests += client.count;
     }
-    
+
     return {
       clientsCount: this.clients.size,
       slidingWindowCount: this.slidingWindowLogs.size,
@@ -206,7 +206,9 @@ function getResetTime(windowMs: number): Date {
 }
 
 // Rate limiter factory
-export function rateLimiter(options: Partial<RateLimitConfig> = {}): (c: Context, next: Next) => Promise<Response | void> {
+export function rateLimiter(
+  options: Partial<RateLimitConfig> = {},
+): (c: Context, next: Next) => Promise<Response | void> {
   const config: RateLimitConfig = {
     ...rateLimitConfigs.global,
     ...options,
@@ -236,7 +238,7 @@ export function rateLimiter(options: Partial<RateLimitConfig> = {}): (c: Context
       // Check if limit exceeded
       if (client.count > config.maxRequests) {
         const retryAfter = Math.ceil((resetTime.getTime() - Date.now()) / 1000);
-        
+
         logger.warn("Rate limit exceeded", {
           requestId,
           clientId,
@@ -262,7 +264,7 @@ export function rateLimiter(options: Partial<RateLimitConfig> = {}): (c: Context
             clientId,
             count: client.count,
             windowMs: config.windowMs,
-          }
+          },
         );
       }
 
@@ -278,19 +280,18 @@ export function rateLimiter(options: Partial<RateLimitConfig> = {}): (c: Context
         // Rollback the increment
         client.count--;
       }
-
     } catch (error) {
       // Re-throw if it's already a RateLimitError
       if (error instanceof RateLimitError) {
         throw error;
       }
-      
+
       // Log unexpected errors but don't block the request
       logger.error("Rate limiter error", {
         requestId,
         error: error instanceof Error ? error : new Error(String(error)),
       });
-      
+
       // Continue processing
       return next();
     }
@@ -302,7 +303,9 @@ export const apiRateLimiter = rateLimiter(rateLimitConfigs.api);
 export const formRateLimiter = rateLimiter(rateLimitConfigs.form);
 
 // Sliding window rate limiter for more accurate rate limiting
-export function slidingWindowRateLimiter(options: Partial<RateLimitConfig> = {}): (c: Context, next: Next) => Promise<Response | void> {
+export function slidingWindowRateLimiter(
+  options: Partial<RateLimitConfig> = {},
+): (c: Context, next: Next) => Promise<Response | void> {
   const config: RateLimitConfig = {
     ...rateLimitConfigs.global,
     ...options,
@@ -331,7 +334,7 @@ export function slidingWindowRateLimiter(options: Partial<RateLimitConfig> = {})
 
       if (count > config.maxRequests) {
         const retryAfter = Math.ceil(config.windowMs / 1000);
-        
+
         logger.warn("Rate limit exceeded (sliding window)", {
           requestId,
           clientId,
@@ -352,7 +355,7 @@ export function slidingWindowRateLimiter(options: Partial<RateLimitConfig> = {})
             count,
             windowMs: config.windowMs,
             algorithm: "sliding-window",
-          }
+          },
         );
       }
 
@@ -361,12 +364,12 @@ export function slidingWindowRateLimiter(options: Partial<RateLimitConfig> = {})
       if (error instanceof RateLimitError) {
         throw error;
       }
-      
+
       logger.error("Sliding window rate limiter error", {
         requestId,
         error: error instanceof Error ? error : new Error(String(error)),
       });
-      
+
       return next();
     }
   };
@@ -375,13 +378,13 @@ export function slidingWindowRateLimiter(options: Partial<RateLimitConfig> = {})
 // IP whitelist functionality
 const whitelistedIPs = new Set<string>([
   "127.0.0.1",
-  "::1",  // IPv6 localhost
+  "::1", // IPv6 localhost
   // Add more trusted IPs here
 ]);
 
 export function createWhitelistSkip(additionalIPs: string[] = []): (c: Context) => boolean {
   const allWhitelisted = new Set([...whitelistedIPs, ...additionalIPs]);
-  
+
   return (c: Context) => {
     const clientId = getClientId(c);
     return allWhitelisted.has(clientId);

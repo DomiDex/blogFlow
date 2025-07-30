@@ -3,13 +3,13 @@
 import { assertEquals } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
 import {
+  type FormData,
   formDataSchema,
-  validateFormData,
+  type QuillDelta,
   validateContent,
   validateContentLength,
   validateContentUrls,
-  type FormData,
-  type QuillDelta,
+  validateFormData,
 } from "@utils/validation.ts";
 import * as fixtures from "../../fixtures/quill-delta.ts";
 
@@ -19,7 +19,8 @@ describe("Validation Utils", () => {
       const validData = {
         authorName: "John Doe",
         articleTitle: "Test Article About Writing Great Content",
-        metaDescription: "A test article description that is long enough for validation requirements",
+        metaDescription:
+          "A test article description that is long enough for validation requirements",
         articleContent: fixtures.COMPLEX_DELTA,
       };
 
@@ -65,12 +66,13 @@ describe("Validation Utils", () => {
 
       const result = formDataSchema.safeParse(invalidData);
       assertEquals(result.success, false);
-      
+
       const validData = {
         ...invalidData,
-        metaDescription: "This is a valid meta description with at least fifty characters for SEO purposes",
+        metaDescription:
+          "This is a valid meta description with at least fifty characters for SEO purposes",
       };
-      
+
       const validResult = formDataSchema.safeParse(validData);
       if (!validResult.success) {
         console.log("Validation errors for 'validData':", validResult.error.errors);
@@ -82,7 +84,8 @@ describe("Validation Utils", () => {
       const validData = {
         authorName: "John Doe",
         articleTitle: "Test Article With Enough Characters For Validation Rules",
-        metaDescription: "This is a valid meta description with at least fifty characters for SEO purposes",
+        metaDescription:
+          "This is a valid meta description with at least fifty characters for SEO purposes",
         articleContent: fixtures.COMPLEX_DELTA,
         publishNow: true,
         slug: "custom-slug",
@@ -115,8 +118,14 @@ describe("Validation Utils", () => {
       assertEquals(result.success, true);
       if (result.success) {
         // Check defaults or undefined values
-        assertEquals(result.data.publishNow === false || result.data.publishNow === undefined, true);
-        assertEquals(Array.isArray(result.data.categories) || result.data.categories === undefined, true);
+        assertEquals(
+          result.data.publishNow === false || result.data.publishNow === undefined,
+          true,
+        );
+        assertEquals(
+          Array.isArray(result.data.categories) || result.data.categories === undefined,
+          true,
+        );
         assertEquals(Array.isArray(result.data.tags) || result.data.tags === undefined, true);
       }
     });
@@ -155,7 +164,9 @@ describe("Validation Utils", () => {
   describe("validateContentLength", () => {
     it("should pass with valid content length", () => {
       const delta = {
-        ops: [{ insert: "This is a test article with enough words to pass the minimum requirement." }],
+        ops: [{
+          insert: "This is a test article with enough words to pass the minimum requirement.",
+        }],
       };
 
       const result = validateContentLength(delta, 5);
@@ -207,7 +218,7 @@ describe("Validation Utils", () => {
   describe("validateContent", () => {
     it("should validate content with multiple rules", () => {
       const delta = fixtures.COMPLEX_DELTA;
-      
+
       const result = validateContent(delta, {
         minWords: 10,
         validateUrls: true,

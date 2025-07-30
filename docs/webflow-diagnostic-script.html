@@ -1,0 +1,173 @@
+<!-- Diagnostic Script to Debug Form Issues -->
+<script>
+(function() {
+  'use strict';
+  
+  console.log('=== BLOGFLOW DIAGNOSTIC SCRIPT ===');
+  console.log('Script loaded at:', new Date().toISOString());
+  
+  // Check what's available
+  console.log('Window.Webflow exists:', typeof window.Webflow !== 'undefined');
+  console.log('Quill exists:', typeof Quill !== 'undefined');
+  console.log('Document ready state:', document.readyState);
+  
+  function diagnose() {
+    console.log('\n=== RUNNING DIAGNOSTICS ===');
+    
+    // 1. Find all forms
+    const forms = document.querySelectorAll('form');
+    console.log(`Found ${forms.length} form(s)`);
+    
+    forms.forEach((form, index) => {
+      console.log(`\nForm ${index + 1}:`);
+      console.log('- Name:', form.getAttribute('data-name') || 'No name');
+      console.log('- Action:', form.action || 'No action');
+      console.log('- Method:', form.method || 'No method');
+      console.log('- Has submit button:', !!form.querySelector('[type="submit"]'));
+      console.log('- Form HTML:', form.outerHTML.substring(0, 200) + '...');
+      
+      // List all inputs
+      const inputs = form.querySelectorAll('input, textarea, select');
+      console.log(`- Found ${inputs.length} input(s):`);
+      inputs.forEach(input => {
+        console.log(`  * ${input.tagName} - name: "${input.name}", type: "${input.type}", id: "${input.id}"`);
+      });
+    });
+    
+    // 2. Check for Quill editor
+    const editorEl = document.getElementById('editor');
+    console.log('\nQuill Editor element:', editorEl ? 'Found' : 'Not found');
+    if (editorEl) {
+      console.log('Editor element:', editorEl);
+    }
+    
+    // 3. Try to find submit button
+    const submitButtons = document.querySelectorAll('[type="submit"], button:contains("Submit"), input[value*="Submit"]');
+    console.log(`\nFound ${submitButtons.length} potential submit button(s)`);
+    
+    // 4. Add test button
+    console.log('\n=== ADDING TEST BUTTON ===');
+    addTestButton();
+  }
+  
+  function addTestButton() {
+    // Create a floating test button
+    const testBtn = document.createElement('button');
+    testBtn.textContent = 'Test BlogFlow Submit';
+    testBtn.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 9999;
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    `;
+    
+    testBtn.addEventListener('click', async function() {
+      console.log('\n=== TEST SUBMISSION ===');
+      
+      const form = document.querySelector('form');
+      if (!form) {
+        alert('No form found on page!');
+        return;
+      }
+      
+      try {
+        // Collect all form data
+        const data = {};
+        const inputs = form.querySelectorAll('input, textarea, select');
+        
+        inputs.forEach(input => {
+          if (input.name && !input.name.startsWith('_')) {
+            console.log(`Collecting ${input.name}:`, input.value);
+            if (input.type === 'checkbox') {
+              data[input.name] = input.checked;
+            } else {
+              data[input.name] = input.value || '';
+            }
+          }
+        });
+        
+        // Check for Quill
+        if (typeof Quill !== 'undefined' && document.getElementById('editor')) {
+          try {
+            const quillInstance = Quill.find(document.getElementById('editor'));
+            if (quillInstance) {
+              const content = quillInstance.getContents();
+              const text = quillInstance.getText();
+              console.log('Quill content length:', text.length);
+              data.articleContent = content;
+            }
+          } catch (e) {
+            console.log('Could not get Quill content:', e);
+            // Try manual initialization
+            const quill = new Quill('#editor', { theme: 'snow' });
+            data.articleContent = quill.getContents();
+          }
+        }
+        
+        // Add test data for missing fields
+        data.authorName = data.authorName || 'Test Author';
+        data.authorEmail = data.authorEmail || data.email || 'test@example.com';
+        data.articleTitle = data.articleTitle || 'Test Article';
+        data.metaDescription = data.metaDescription || 'Test description';
+        
+        if (!data.articleContent) {
+          data.articleContent = {
+            ops: [{ insert: 'This is a test article content. '.repeat(20) }]
+          };
+        }
+        
+        console.log('Submitting data:', data);
+        
+        // Make API call
+        const response = await fetch('https://dominiquede-blogflow-62.deno.dev/api/webflow-form', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        console.log('Response status:', response.status);
+        console.log('Response data:', result);
+        
+        if (response.ok) {
+          alert('Success! Check console for details.');
+        } else {
+          alert('Error: ' + (result.message || 'Unknown error'));
+        }
+        
+      } catch (error) {
+        console.error('Test submission error:', error);
+        alert('Error: ' + error.message);
+      }
+    });
+    
+    document.body.appendChild(testBtn);
+    console.log('Test button added to page (bottom right)');
+  }
+  
+  // Run diagnostics on multiple events
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', diagnose);
+  } else {
+    setTimeout(diagnose, 500);
+  }
+  
+  // Also run when Webflow is ready
+  if (window.Webflow) {
+    window.Webflow.push(diagnose);
+  }
+  
+  // Make diagnose function available globally for manual testing
+  window.blogflowDiagnose = diagnose;
+  
+})();
+</script>

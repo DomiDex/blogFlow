@@ -6,13 +6,13 @@ import { config } from "@config/index.ts";
 import type { Variables } from "@app-types";
 import {
   BaseError as _BaseError,
+  isBaseError,
+  isOperationalError,
+  isRateLimitError,
+  isValidationError,
+  RateLimitError as _RateLimitError,
   ValidationError as _ValidationError,
   WebflowError as _WebflowError,
-  RateLimitError as _RateLimitError,
-  isBaseError,
-  isValidationError,
-  isRateLimitError,
-  isOperationalError,
 } from "@utils/errors.ts";
 
 interface ErrorResponse {
@@ -84,7 +84,7 @@ export const errorHandler = (): MiddlewareHandler<{ Variables: Variables }> => {
         // Regular errors
         message = error.message;
         userMessage = isDevelopment ? error.message : "An unexpected error occurred";
-        
+
         // Try to infer error type from error name
         const errorNameMap: Record<string, { status: number; code: string }> = {
           SyntaxError: { status: 400, code: "INVALID_JSON" },

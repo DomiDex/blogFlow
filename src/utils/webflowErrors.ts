@@ -7,7 +7,7 @@
 export enum WebflowErrorCode {
   // Authentication & Authorization
   UNAUTHORIZED = "unauthorized",
-  FORBIDDEN = "forbidden", 
+  FORBIDDEN = "forbidden",
   INVALID_TOKEN = "invalid_token",
   MISSING_SCOPES = "missing_scopes",
 
@@ -129,7 +129,11 @@ export class WebflowError extends Error {
  * Authentication/Authorization errors
  */
 export class WebflowAuthError extends WebflowError {
-  constructor(message: string, code: WebflowErrorCode = WebflowErrorCode.UNAUTHORIZED, context?: Record<string, unknown>) {
+  constructor(
+    message: string,
+    code: WebflowErrorCode = WebflowErrorCode.UNAUTHORIZED,
+    context?: Record<string, unknown>,
+  ) {
     super({
       code,
       message,
@@ -152,9 +156,9 @@ export class WebflowValidationError extends WebflowError {
   }>;
 
   constructor(
-    message: string, 
+    message: string,
     fieldErrors: Array<{ field: string; message: string; value?: unknown }> = [],
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ) {
     super({
       code: WebflowErrorCode.VALIDATION_ERROR,
@@ -172,15 +176,15 @@ export class WebflowValidationError extends WebflowError {
    */
   getFieldErrors(fieldName: string): string[] {
     return this.fieldErrors
-      .filter(error => error.field === fieldName)
-      .map(error => error.message);
+      .filter((error) => error.field === fieldName)
+      .map((error) => error.message);
   }
 
   /**
    * Get all field names with errors
    */
   getErrorFields(): string[] {
-    return [...new Set(this.fieldErrors.map(error => error.field))];
+    return [...new Set(this.fieldErrors.map((error) => error.field))];
   }
 }
 
@@ -193,7 +197,8 @@ export class WebflowRateLimitError extends WebflowError {
   constructor(rateLimitInfo: WebflowRateLimitInfo, context?: Record<string, unknown>) {
     super({
       code: WebflowErrorCode.RATE_LIMITED,
-      message: `Rate limit exceeded. ${rateLimitInfo.remaining}/${rateLimitInfo.limit} requests remaining. Reset at ${rateLimitInfo.reset.toISOString()}`,
+      message:
+        `Rate limit exceeded. ${rateLimitInfo.remaining}/${rateLimitInfo.limit} requests remaining. Reset at ${rateLimitInfo.reset.toISOString()}`,
       httpStatus: 429,
       retryable: true,
       retryAfter: rateLimitInfo.retryAfter,
@@ -261,13 +266,13 @@ export class WebflowNetworkError extends WebflowError {
 export function parseWebflowError(response: Response, responseBody?: unknown): WebflowError {
   const status = response.status;
   const url = response.url;
-  
+
   // Extract rate limit headers
   const rateLimitInfo = extractRateLimitInfo(response);
-  
+
   // Parse response body
   let errorData: Record<string, unknown> = {};
-  if (responseBody && typeof responseBody === 'object') {
+  if (responseBody && typeof responseBody === "object") {
     errorData = responseBody as Record<string, unknown>;
   }
 
@@ -293,48 +298,58 @@ export function parseWebflowError(response: Response, responseBody?: unknown): W
         reset: new Date(Date.now() + 60000), // Default 1 minute
         retryAfter: 60,
       },
-      context
+      context,
     );
   }
 
   // Authentication errors (401, 403)
   if (status === 401 || status === 403) {
     const code = status === 403 ? WebflowErrorCode.FORBIDDEN : WebflowErrorCode.UNAUTHORIZED;
-    const message = typeof errorData.message === 'string' ? errorData.message : 
-      (status === 403 ? "Forbidden: Insufficient permissions" : "Unauthorized: Invalid API token");
-    
+    const message = typeof errorData.message === "string"
+      ? errorData.message
+      : (status === 403
+        ? "Forbidden: Insufficient permissions"
+        : "Unauthorized: Invalid API token");
+
     // Check for missing scopes
-    if (typeof errorData.message === 'string' && 
-        errorData.message.toLowerCase().includes("missing") && 
-        errorData.message.toLowerCase().includes("scopes")) {
+    if (
+      typeof errorData.message === "string" &&
+      errorData.message.toLowerCase().includes("missing") &&
+      errorData.message.toLowerCase().includes("scopes")
+    ) {
       return new WebflowAuthError(errorData.message, WebflowErrorCode.MISSING_SCOPES, context);
     }
-    
+
     return new WebflowAuthError(message, code, context);
   }
 
   // Not found errors (404)
   if (status === 404) {
-    const _message = typeof errorData.message === 'string' ? errorData.message : "Resource not found";
+    const _message = typeof errorData.message === "string"
+      ? errorData.message
+      : "Resource not found";
     return new WebflowNotFoundError("Resource", undefined, context);
   }
 
   // Validation errors (400)
   if (status === 400) {
-    const message = typeof errorData.message === 'string' ? errorData.message : "Validation error";
-    
+    const message = typeof errorData.message === "string" ? errorData.message : "Validation error";
+
     // Parse field-specific validation errors
     const fieldErrors: Array<{ field: string; message: string; value?: unknown }> = [];
-    
+
     if (errorData.details) {
       // Handle validation details
       for (const [key, detail] of Object.entries(errorData.details)) {
-        if (typeof detail === 'object' && detail !== null) {
+        if (typeof detail === "object" && detail !== null) {
           const detailObj = detail as Record<string, unknown>;
           fieldErrors.push({
-            field: typeof detailObj.param === 'string' ? detailObj.param : key,
-            message: (typeof detailObj.description === 'string' ? detailObj.description : 
-                     typeof detailObj.message === 'string' ? detailObj.message : 'Invalid value'),
+            field: typeof detailObj.param === "string" ? detailObj.param : key,
+            message: (typeof detailObj.description === "string"
+              ? detailObj.description
+              : typeof detailObj.message === "string"
+              ? detailObj.message
+              : "Invalid value"),
             value: detailObj.value,
           });
         }
@@ -346,13 +361,17 @@ export function parseWebflowError(response: Response, responseBody?: unknown): W
 
   // Server errors (5xx)
   if (status >= 500) {
-    const message = typeof errorData.message === 'string' ? errorData.message : `Server error: ${response.statusText}`;
+    const message = typeof errorData.message === "string"
+      ? errorData.message
+      : `Server error: ${response.statusText}`;
     return new WebflowServerError(message, status, context);
   }
 
   // Client errors (4xx)
   if (status >= 400) {
-    const message = typeof errorData.message === 'string' ? errorData.message : `Client error: ${response.statusText}`;
+    const message = typeof errorData.message === "string"
+      ? errorData.message
+      : `Client error: ${response.statusText}`;
     return new WebflowError({
       code: WebflowErrorCode.UNKNOWN_ERROR,
       message,
@@ -365,7 +384,9 @@ export function parseWebflowError(response: Response, responseBody?: unknown): W
   // Unknown error
   return new WebflowError({
     code: WebflowErrorCode.UNKNOWN_ERROR,
-    message: typeof errorData.message === 'string' ? errorData.message : "Unknown Webflow API error",
+    message: typeof errorData.message === "string"
+      ? errorData.message
+      : "Unknown Webflow API error",
     httpStatus: status,
     retryable: false,
     context,
@@ -377,7 +398,7 @@ export function parseWebflowError(response: Response, responseBody?: unknown): W
  */
 export function parseNetworkError(error: Error): WebflowNetworkError {
   let message = "Network error occurred";
-  
+
   if (error.message.includes("timeout")) {
     message = "Request timeout - Webflow API took too long to respond";
   } else if (error.message.includes("AbortError")) {
@@ -431,14 +452,14 @@ export function isRetryableError(error: unknown): boolean {
   if (isWebflowError(error)) {
     return error.isRetryable();
   }
-  
+
   // Network errors are generally retryable
   if (error instanceof Error) {
-    return error.message.includes("timeout") || 
-           error.message.includes("NetworkError") ||
-           error.message.includes("Failed to fetch");
+    return error.message.includes("timeout") ||
+      error.message.includes("NetworkError") ||
+      error.message.includes("Failed to fetch");
   }
-  
+
   return false;
 }
 
@@ -449,39 +470,41 @@ export function getUserFriendlyMessage(error: WebflowError): string {
   switch (error.code) {
     case WebflowErrorCode.UNAUTHORIZED:
       return "Authentication failed. Please check your API credentials.";
-    
+
     case WebflowErrorCode.FORBIDDEN:
       return "Access denied. Your API token may not have sufficient permissions.";
-    
+
     case WebflowErrorCode.MISSING_SCOPES:
       return "Your API token is missing required permissions. Please regenerate your token with the necessary scopes.";
-    
+
     case WebflowErrorCode.RATE_LIMITED:
-      return `Rate limit exceeded. Please wait ${error.retryAfter || 60} seconds before trying again.`;
-    
+      return `Rate limit exceeded. Please wait ${
+        error.retryAfter || 60
+      } seconds before trying again.`;
+
     case WebflowErrorCode.NOT_FOUND:
       return "The requested resource could not be found.";
-    
+
     case WebflowErrorCode.VALIDATION_ERROR:
       if (error instanceof WebflowValidationError && error.fieldErrors.length > 0) {
         const fieldNames = error.getErrorFields().join(", ");
         return `Validation failed for fields: ${fieldNames}. Please check your input data.`;
       }
       return "The submitted data contains validation errors. Please check your input.";
-    
+
     case WebflowErrorCode.DUPLICATE_SLUG:
       return "This URL slug is already in use. Please choose a different one.";
-    
+
     case WebflowErrorCode.CONTENT_TOO_LARGE:
       return "The content is too large. Please reduce the size and try again.";
-    
+
     case WebflowErrorCode.NETWORK_ERROR:
       return "Network connection error. Please check your internet connection and try again.";
-    
+
     case WebflowErrorCode.INTERNAL_ERROR:
     case WebflowErrorCode.SERVICE_UNAVAILABLE:
       return "Webflow service is temporarily unavailable. Please try again in a few minutes.";
-    
+
     default:
       return error.message || "An unexpected error occurred. Please try again.";
   }
@@ -497,9 +520,12 @@ export interface ErrorRecoveryStrategy {
   backoffMultiplier: number;
 }
 
-export function getErrorRecoveryStrategy(error: WebflowError, attempt: number = 1): ErrorRecoveryStrategy {
+export function getErrorRecoveryStrategy(
+  error: WebflowError,
+  attempt: number = 1,
+): ErrorRecoveryStrategy {
   const baseDelay = error.getRetryDelay();
-  
+
   // Rate limiting - respect the retry-after header
   if (error instanceof WebflowRateLimitError) {
     return {
@@ -509,7 +535,7 @@ export function getErrorRecoveryStrategy(error: WebflowError, attempt: number = 
       backoffMultiplier: 1, // Don't increase delay for rate limits
     };
   }
-  
+
   // Server errors - exponential backoff
   if (error instanceof WebflowServerError) {
     return {
@@ -519,7 +545,7 @@ export function getErrorRecoveryStrategy(error: WebflowError, attempt: number = 
       backoffMultiplier: 2,
     };
   }
-  
+
   // Network errors - quick retry with backoff
   if (error instanceof WebflowNetworkError) {
     return {
@@ -529,7 +555,7 @@ export function getErrorRecoveryStrategy(error: WebflowError, attempt: number = 
       backoffMultiplier: 1.5,
     };
   }
-  
+
   // Other retryable errors
   if (error.isRetryable()) {
     return {
@@ -539,7 +565,7 @@ export function getErrorRecoveryStrategy(error: WebflowError, attempt: number = 
       backoffMultiplier: 1,
     };
   }
-  
+
   // Non-retryable errors
   return {
     shouldRetry: false,

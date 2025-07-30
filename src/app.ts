@@ -18,20 +18,23 @@ export interface AppConfig {
  */
 export function createApp(appConfig?: AppConfig): Hono<{ Variables: Variables }> {
   const app = new Hono<{ Variables: Variables }>();
-  
+
   // Production optimizations
   if (config.NODE_ENV === "production" && !appConfig?.testing) {
     // Enable response compression
-    app.use("*", compress({
-      encoding: "gzip",
-    }));
+    app.use(
+      "*",
+      compress({
+        encoding: "gzip",
+      }),
+    );
   }
-  
+
   // Register middleware
   registerMiddleware(app, { testing: appConfig?.testing });
-  
+
   // Register routes
   registerRoutes(app);
-  
+
   return app;
 }

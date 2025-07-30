@@ -71,9 +71,9 @@ class Logger {
 
     for (const [key, value] of Object.entries(masked)) {
       const lowerKey = key.toLowerCase();
-      
+
       // Check if key contains sensitive patterns
-      if (sensitiveKeys.some(sensitive => lowerKey.includes(sensitive))) {
+      if (sensitiveKeys.some((sensitive) => lowerKey.includes(sensitive))) {
         masked[key] = "[REDACTED]";
       } else if (typeof value === "object" && value !== null) {
         // Recursively mask nested objects
@@ -87,7 +87,7 @@ class Logger {
   private formatLogEntry(
     level: LogLevel,
     message: string,
-    context?: LogContext
+    context?: LogContext,
   ): string {
     const entry: LogEntry = {
       timestamp: this.formatTimestamp(),
@@ -117,24 +117,24 @@ class Logger {
   private formatDevelopmentLog(entry: LogEntry): string {
     const levelColors: Record<LogLevel, string> = {
       debug: "\x1b[36m", // Cyan
-      info: "\x1b[32m",  // Green
-      warn: "\x1b[33m",  // Yellow
+      info: "\x1b[32m", // Green
+      warn: "\x1b[33m", // Yellow
       error: "\x1b[31m", // Red
     };
 
     const reset = "\x1b[0m";
     const color = levelColors[entry.level];
     const levelStr = entry.level.toUpperCase().padEnd(5);
-    
+
     let log = `${color}[${levelStr}]${reset} ${entry.timestamp} - ${entry.message}`;
 
     if (entry.context) {
       const { error, ...otherContext } = entry.context;
-      
+
       if (Object.keys(otherContext).length > 0) {
         log += `\n  Context: ${JSON.stringify(otherContext, null, 2)}`;
       }
-      
+
       if (error && error.stack) {
         log += `\n  Stack: ${error.stack}`;
       }
@@ -184,11 +184,11 @@ class Logger {
     path: string,
     statusCode: number,
     duration: number,
-    context?: LogContext
+    context?: LogContext,
   ): void {
     const level = statusCode >= 400 ? "error" : statusCode >= 300 ? "warn" : "info";
     const message = `${method} ${path} ${statusCode} ${duration}ms`;
-    
+
     this.log(level, message, {
       method,
       path,
@@ -202,7 +202,7 @@ class Logger {
   performance(operation: string, duration: number, context?: LogContext): void {
     const message = `Performance: ${operation} took ${duration}ms`;
     const level = duration > 1000 ? "warn" : "debug";
-    
+
     this.log(level, message, {
       operation,
       duration,

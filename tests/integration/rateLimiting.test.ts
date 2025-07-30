@@ -1,9 +1,14 @@
 /// <reference lib="deno.ns" />
 
 import { assertEquals, assertExists } from "@std/assert";
-import { describe, it, beforeEach, afterEach } from "@std/testing/bdd";
+import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
 import { setupIntegrationTest } from "../helpers/mock-app.ts";
-import { createMockFetch, createMockResponse, FakeTime, waitForPromises } from "../helpers/test-utils.ts";
+import {
+  createMockFetch,
+  createMockResponse,
+  FakeTime,
+  waitForPromises,
+} from "../helpers/test-utils.ts";
 import * as fixtures from "../fixtures/quill-delta.ts";
 import * as webflowFixtures from "../fixtures/webflow-responses.ts";
 import type { FormData } from "@/types/form.ts";
@@ -14,43 +19,43 @@ describe("Rate Limiting Integration Tests", () => {
   let fakeTime: FakeTime;
   let originalEnv: { [key: string]: string | undefined };
   const { app } = setupIntegrationTest();
-  
+
   beforeEach(() => {
     originalFetch = globalThis.fetch;
     mockResponses = new Map();
     globalThis.fetch = createMockFetch(mockResponses);
-    
+
     fakeTime = new FakeTime();
     fakeTime.install();
-    
+
     // Save original env
     originalEnv = {
       RATE_LIMIT_WINDOW_MS: Deno.env.get("RATE_LIMIT_WINDOW_MS"),
-      RATE_LIMIT_MAX_REQUESTS: Deno.env.get("RATE_LIMIT_MAX_REQUESTS")
+      RATE_LIMIT_MAX_REQUESTS: Deno.env.get("RATE_LIMIT_MAX_REQUESTS"),
     };
-    
+
     // Set test rate limits
     Deno.env.set("RATE_LIMIT_WINDOW_MS", "60000"); // 1 minute
     Deno.env.set("RATE_LIMIT_MAX_REQUESTS", "5"); // 5 requests per minute
-    
+
     // Setup default mock responses
     const baseUrl = "https://api.webflow.com/v2";
-    
+
     mockResponses.set(
       `${baseUrl}/collections/test-collection-id/items?limit=100`,
-      createMockResponse(webflowFixtures.LIST_ITEMS_RESPONSE)
+      createMockResponse(webflowFixtures.LIST_ITEMS_RESPONSE),
     );
-    
+
     mockResponses.set(
       `${baseUrl}/collections/test-collection-id/items`,
-      createMockResponse(webflowFixtures.CREATE_ITEM_SUCCESS_RESPONSE, { status: 201 })
+      createMockResponse(webflowFixtures.CREATE_ITEM_SUCCESS_RESPONSE, { status: 201 }),
     );
   });
-  
+
   afterEach(() => {
     globalThis.fetch = originalFetch;
     fakeTime.uninstall();
-    
+
     // Restore original env
     Object.entries(originalEnv).forEach(([key, value]) => {
       if (value === undefined) {
@@ -66,9 +71,10 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "Rate Test",
         articleTitle: "Testing Rate Limits",
-        metaDescription: "Article within rate limit - this test validates that requests within the configured rate limit are properly allowed through",
+        metaDescription:
+          "Article within rate limit - this test validates that requests within the configured rate limit are properly allowed through",
         articleContent: fixtures.SIMPLE_DELTA,
-        publishNow: false
+        publishNow: false,
       };
 
       // Make 5 requests (the limit)
@@ -79,14 +85,14 @@ describe("Rate Limiting Integration Tests", () => {
           headers: {
             "Content-Type": "application/json",
             "Authorization": "Bearer test-token",
-            "X-Forwarded-For": "192.168.1.1" // Same IP
+            "X-Forwarded-For": "192.168.1.1", // Same IP
           },
           body: JSON.stringify({
             ...formData,
-            articleTitle: `Rate Limit Test ${i + 1}`
-          })
+            articleTitle: `Rate Limit Test ${i + 1}`,
+          }),
         });
-        
+
         responses.push(response);
       }
 
@@ -100,9 +106,10 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "Rate Test",
         articleTitle: "Testing Rate Limit Exceeded",
-        metaDescription: "Article that exceeds rate limit - this test checks that requests exceeding the rate limit are properly blocked",
+        metaDescription:
+          "Article that exceeds rate limit - this test checks that requests exceeding the rate limit are properly blocked",
         articleContent: fixtures.SIMPLE_DELTA,
-        publishNow: false
+        publishNow: false,
       };
 
       // Make 6 requests (1 over the limit)
@@ -113,14 +120,14 @@ describe("Rate Limiting Integration Tests", () => {
           headers: {
             "Content-Type": "application/json",
             "Authorization": "Bearer test-token",
-            "X-Forwarded-For": "192.168.1.1" // Same IP
+            "X-Forwarded-For": "192.168.1.1", // Same IP
           },
           body: JSON.stringify({
             ...formData,
-            articleTitle: `Rate Limit Exceeded ${i + 1}`
-          })
+            articleTitle: `Rate Limit Exceeded ${i + 1}`,
+          }),
         });
-        
+
         responses.push(response);
       }
 
@@ -131,11 +138,11 @@ describe("Rate Limiting Integration Tests", () => {
 
       // 6th should be rate limited
       assertEquals(responses[5].status, 429);
-      
+
       const error = await responses[5].json();
       assertEquals(error.error, "Too many requests");
       assertExists(error.retryAfter);
-      
+
       // Should include Retry-After header
       const retryAfter = responses[5].headers.get("Retry-After");
       assertExists(retryAfter);
@@ -148,9 +155,10 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "Window Test",
         articleTitle: "Testing Window Reset",
-        metaDescription: "Testing rate limit window functionality to ensure that limits are properly reset after the configured time window expires",
+        metaDescription:
+          "Testing rate limit window functionality to ensure that limits are properly reset after the configured time window expires",
         articleContent: fixtures.SIMPLE_DELTA,
-        publishNow: false
+        publishNow: false,
       };
 
       // Make 5 requests (hit the limit)
@@ -160,12 +168,12 @@ describe("Rate Limiting Integration Tests", () => {
           headers: {
             "Content-Type": "application/json",
             "Authorization": "Bearer test-token",
-            "X-Forwarded-For": "192.168.1.2"
+            "X-Forwarded-For": "192.168.1.2",
           },
           body: JSON.stringify({
             ...formData,
-            articleTitle: `Window Test ${i + 1}`
-          })
+            articleTitle: `Window Test ${i + 1}`,
+          }),
         });
       }
 
@@ -175,9 +183,9 @@ describe("Rate Limiting Integration Tests", () => {
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer test-token",
-          "X-Forwarded-For": "192.168.1.2"
+          "X-Forwarded-For": "192.168.1.2",
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
 
       assertEquals(limitedResponse.status, 429);
@@ -192,12 +200,12 @@ describe("Rate Limiting Integration Tests", () => {
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer test-token",
-          "X-Forwarded-For": "192.168.1.2"
+          "X-Forwarded-For": "192.168.1.2",
         },
         body: JSON.stringify({
           ...formData,
-          articleTitle: "After Window Reset"
-        })
+          articleTitle: "After Window Reset",
+        }),
       });
 
       assertEquals(resetResponse.status, 201);
@@ -207,9 +215,10 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "Sliding Window",
         articleTitle: "Testing Sliding Window",
-        metaDescription: "Testing sliding window rate limiting implementation to verify that requests are tracked correctly within the time window",
+        metaDescription:
+          "Testing sliding window rate limiting implementation to verify that requests are tracked correctly within the time window",
         articleContent: fixtures.SIMPLE_DELTA,
-        publishNow: false
+        publishNow: false,
       };
 
       // Make 3 requests
@@ -219,12 +228,12 @@ describe("Rate Limiting Integration Tests", () => {
           headers: {
             "Content-Type": "application/json",
             "Authorization": "Bearer test-token",
-            "X-Forwarded-For": "192.168.1.3"
+            "X-Forwarded-For": "192.168.1.3",
           },
           body: JSON.stringify({
             ...formData,
-            articleTitle: `Initial ${i + 1}`
-          })
+            articleTitle: `Initial ${i + 1}`,
+          }),
         });
       }
 
@@ -238,12 +247,12 @@ describe("Rate Limiting Integration Tests", () => {
           headers: {
             "Content-Type": "application/json",
             "Authorization": "Bearer test-token",
-            "X-Forwarded-For": "192.168.1.3"
+            "X-Forwarded-For": "192.168.1.3",
           },
           body: JSON.stringify({
             ...formData,
-            articleTitle: `Later ${i + 1}`
-          })
+            articleTitle: `Later ${i + 1}`,
+          }),
         });
       }
 
@@ -253,9 +262,9 @@ describe("Rate Limiting Integration Tests", () => {
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer test-token",
-          "X-Forwarded-For": "192.168.1.3"
+          "X-Forwarded-For": "192.168.1.3",
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
 
       assertEquals(limitedResponse.status, 429);
@@ -272,12 +281,12 @@ describe("Rate Limiting Integration Tests", () => {
           headers: {
             "Content-Type": "application/json",
             "Authorization": "Bearer test-token",
-            "X-Forwarded-For": "192.168.1.3"
+            "X-Forwarded-For": "192.168.1.3",
           },
           body: JSON.stringify({
             ...formData,
-            articleTitle: `Final ${i + 1}`
-          })
+            articleTitle: `Final ${i + 1}`,
+          }),
         });
         successResponses.push(response);
       }
@@ -293,9 +302,10 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "IP Test",
         articleTitle: "Testing Per-IP Limits",
-        metaDescription: "Testing individual IP rate limiting to ensure that rate limits are tracked separately for each client IP address",
+        metaDescription:
+          "Testing individual IP rate limiting to ensure that rate limits are tracked separately for each client IP address",
         articleContent: fixtures.SIMPLE_DELTA,
-        publishNow: false
+        publishNow: false,
       };
 
       // Client 1: Make 5 requests
@@ -305,12 +315,12 @@ describe("Rate Limiting Integration Tests", () => {
           headers: {
             "Content-Type": "application/json",
             "Authorization": "Bearer test-token",
-            "X-Forwarded-For": "10.0.0.1"
+            "X-Forwarded-For": "10.0.0.1",
           },
           body: JSON.stringify({
             ...formData,
-            articleTitle: `Client 1 Request ${i + 1}`
-          })
+            articleTitle: `Client 1 Request ${i + 1}`,
+          }),
         });
       }
 
@@ -320,9 +330,9 @@ describe("Rate Limiting Integration Tests", () => {
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer test-token",
-          "X-Forwarded-For": "10.0.0.1"
+          "X-Forwarded-For": "10.0.0.1",
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
 
       assertEquals(client1Limited.status, 429);
@@ -333,12 +343,12 @@ describe("Rate Limiting Integration Tests", () => {
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer test-token",
-          "X-Forwarded-For": "10.0.0.2"
+          "X-Forwarded-For": "10.0.0.2",
         },
         body: JSON.stringify({
           ...formData,
-          articleTitle: "Client 2 Request"
-        })
+          articleTitle: "Client 2 Request",
+        }),
       });
 
       assertEquals(client2Response.status, 201);
@@ -348,16 +358,17 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "Proxy Test",
         articleTitle: "Testing Proxy Headers",
-        metaDescription: "Testing rate limiting with proxy headers to verify correct client IP identification when requests come through proxies",
+        metaDescription:
+          "Testing rate limiting with proxy headers to verify correct client IP identification when requests come through proxies",
         articleContent: fixtures.SIMPLE_DELTA,
-        publishNow: false
+        publishNow: false,
       };
 
       // Test various proxy header formats
       const proxyHeaders = [
         { "X-Forwarded-For": "203.0.113.1, 198.51.100.1, 172.16.0.1" },
         { "X-Real-IP": "203.0.113.1" },
-        { "CF-Connecting-IP": "203.0.113.1" }
+        { "CF-Connecting-IP": "203.0.113.1" },
       ];
 
       for (const proxyHeader of proxyHeaders) {
@@ -369,9 +380,9 @@ describe("Rate Limiting Integration Tests", () => {
             ...Object.entries(proxyHeader).reduce((acc, [key, value]) => {
               if (value !== undefined) acc[key] = value;
               return acc;
-            }, {} as Record<string, string>)
+            }, {} as Record<string, string>),
           },
-          body: JSON.stringify(formData)
+          body: JSON.stringify(formData),
         });
 
         assertEquals(response.status, 201);
@@ -385,12 +396,12 @@ describe("Rate Limiting Integration Tests", () => {
           headers: {
             "Content-Type": "application/json",
             "Authorization": "Bearer test-token",
-            "X-Forwarded-For": "203.0.113.1"
+            "X-Forwarded-For": "203.0.113.1",
           },
           body: JSON.stringify({
             ...formData,
-            articleTitle: `Additional ${i + 1}`
-          })
+            articleTitle: `Additional ${i + 1}`,
+          }),
         });
       }
 
@@ -400,9 +411,9 @@ describe("Rate Limiting Integration Tests", () => {
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer test-token",
-          "X-Forwarded-For": "203.0.113.1"
+          "X-Forwarded-For": "203.0.113.1",
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
 
       assertEquals(limitedResponse.status, 429);
@@ -414,9 +425,10 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "Burst Test",
         articleTitle: "Testing Burst Protection",
-        metaDescription: "Testing rapid burst request handling to ensure the rate limiter can properly handle multiple concurrent requests",
+        metaDescription:
+          "Testing rapid burst request handling to ensure the rate limiter can properly handle multiple concurrent requests",
         articleContent: fixtures.SIMPLE_DELTA,
-        publishNow: false
+        publishNow: false,
       };
 
       // Send 10 requests as fast as possible
@@ -428,22 +440,22 @@ describe("Rate Limiting Integration Tests", () => {
             headers: {
               "Content-Type": "application/json",
               "Authorization": "Bearer test-token",
-              "X-Forwarded-For": "192.168.1.100"
+              "X-Forwarded-For": "192.168.1.100",
             },
             body: JSON.stringify({
               ...formData,
-              articleTitle: `Burst ${i + 1}`
-            })
-          })
+              articleTitle: `Burst ${i + 1}`,
+            }),
+          }),
         );
       }
 
       const responses = await Promise.all(burstPromises);
-      
+
       // First 5 should succeed
       const successCount = responses.filter((r: Response) => r.status === 201).length;
       assertEquals(successCount, 5);
-      
+
       // Rest should be rate limited
       const limitedCount = responses.filter((r: Response) => r.status === 429).length;
       assertEquals(limitedCount, 5);
@@ -452,13 +464,14 @@ describe("Rate Limiting Integration Tests", () => {
     it("should queue requests when possible", async () => {
       // Set a more restrictive limit for testing
       Deno.env.set("RATE_LIMIT_MAX_REQUESTS", "2");
-      
+
       const formData: FormData = {
         authorName: "Queue Test",
         articleTitle: "Testing Request Queuing",
-        metaDescription: "Testing request queue behavior when rate limits are more restrictive to verify proper queuing functionality",
+        metaDescription:
+          "Testing request queue behavior when rate limits are more restrictive to verify proper queuing functionality",
         articleContent: fixtures.SIMPLE_DELTA,
-        publishNow: false
+        publishNow: false,
       };
 
       // Track response times
@@ -473,29 +486,29 @@ describe("Rate Limiting Integration Tests", () => {
           headers: {
             "Content-Type": "application/json",
             "Authorization": "Bearer test-token",
-            "X-Forwarded-For": "192.168.1.101"
+            "X-Forwarded-For": "192.168.1.101",
           },
           body: JSON.stringify({
             ...formData,
-            articleTitle: `Queue ${i + 1}`
-          })
+            articleTitle: `Queue ${i + 1}`,
+          }),
         });
-        
+
         requests.push(
           (async () => {
             const response = await request;
             responseTimes.push(Date.now() - startTime);
             return response;
-          })()
+          })(),
         );
       }
 
       const responses = await Promise.all(requests);
-      
+
       // First 2 should succeed immediately
       assertEquals(responses[0].status, 201);
       assertEquals(responses[1].status, 201);
-      
+
       // Next 2 should be rate limited
       assertEquals(responses[2].status, 429);
       assertEquals(responses[3].status, 429);
@@ -507,13 +520,14 @@ describe("Rate Limiting Integration Tests", () => {
       // Set very restrictive limits
       Deno.env.set("RATE_LIMIT_WINDOW_MS", "10000"); // 10 seconds
       Deno.env.set("RATE_LIMIT_MAX_REQUESTS", "1"); // 1 request per 10 seconds
-      
+
       const formData: FormData = {
         authorName: "Config Test",
         articleTitle: "Testing Custom Config",
-        metaDescription: "Testing custom rate limit configuration to ensure environment variables are properly respected by the middleware",
+        metaDescription:
+          "Testing custom rate limit configuration to ensure environment variables are properly respected by the middleware",
         articleContent: fixtures.SIMPLE_DELTA,
-        publishNow: false
+        publishNow: false,
       };
 
       // First request should succeed
@@ -522,9 +536,9 @@ describe("Rate Limiting Integration Tests", () => {
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer test-token",
-          "X-Forwarded-For": "192.168.1.200"
+          "X-Forwarded-For": "192.168.1.200",
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
 
       assertEquals(firstResponse.status, 201);
@@ -535,16 +549,16 @@ describe("Rate Limiting Integration Tests", () => {
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer test-token",
-          "X-Forwarded-For": "192.168.1.200"
+          "X-Forwarded-For": "192.168.1.200",
         },
         body: JSON.stringify({
           ...formData,
-          articleTitle: "Second Request"
-        })
+          articleTitle: "Second Request",
+        }),
       });
 
       assertEquals(secondResponse.status, 429);
-      
+
       // Verify retry-after is approximately 10 seconds
       const retryAfter = parseInt(secondResponse.headers.get("Retry-After")!);
       assertEquals(retryAfter >= 9 && retryAfter <= 10, true);
@@ -555,12 +569,12 @@ describe("Rate Limiting Integration Tests", () => {
       // - Internal services
       // - Authenticated admin users
       // - Health check endpoints
-      
+
       const response = await app.request("/health", {
         method: "GET",
         headers: {
-          "X-Forwarded-For": "192.168.1.250"
-        }
+          "X-Forwarded-For": "192.168.1.250",
+        },
       });
 
       // Health endpoint should not be rate limited
@@ -573,9 +587,10 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "Header Test",
         articleTitle: "Testing Rate Limit Headers",
-        metaDescription: "Testing rate limit header information to verify that proper rate limit headers are included in API responses",
+        metaDescription:
+          "Testing rate limit header information to verify that proper rate limit headers are included in API responses",
         articleContent: fixtures.SIMPLE_DELTA,
-        publishNow: false
+        publishNow: false,
       };
 
       // Make first request
@@ -584,18 +599,18 @@ describe("Rate Limiting Integration Tests", () => {
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer test-token",
-          "X-Forwarded-For": "192.168.2.1"
+          "X-Forwarded-For": "192.168.2.1",
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
 
       assertEquals(response.status, 201);
-      
+
       // Check for rate limit headers
       const limitHeader = response.headers.get("X-RateLimit-Limit");
       const remainingHeader = response.headers.get("X-RateLimit-Remaining");
       const resetHeader = response.headers.get("X-RateLimit-Reset");
-      
+
       if (limitHeader && remainingHeader) {
         assertEquals(limitHeader, "5");
         assertEquals(remainingHeader, "4");
@@ -607,9 +622,10 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "Count Test",
         articleTitle: "Testing Remaining Count",
-        metaDescription: "Testing rate limit remaining count to ensure the X-RateLimit-Remaining header correctly tracks available requests",
+        metaDescription:
+          "Testing rate limit remaining count to ensure the X-RateLimit-Remaining header correctly tracks available requests",
         articleContent: fixtures.SIMPLE_DELTA,
-        publishNow: false
+        publishNow: false,
       };
 
       // Make 4 requests and check remaining count
@@ -619,16 +635,16 @@ describe("Rate Limiting Integration Tests", () => {
           headers: {
             "Content-Type": "application/json",
             "Authorization": "Bearer test-token",
-            "X-Forwarded-For": "192.168.2.2"
+            "X-Forwarded-For": "192.168.2.2",
           },
           body: JSON.stringify({
             ...formData,
-            articleTitle: `Count Test ${i + 1}`
-          })
+            articleTitle: `Count Test ${i + 1}`,
+          }),
         });
 
         assertEquals(response.status, 201);
-        
+
         const remaining = response.headers.get("X-RateLimit-Remaining");
         if (remaining) {
           assertEquals(remaining, String(4 - i));
@@ -643,16 +659,17 @@ describe("Rate Limiting Integration Tests", () => {
       const formData: FormData = {
         authorName: "Distributed Test",
         articleTitle: "Testing Distributed Clients",
-        metaDescription: "Testing distributed client identification across multiple proxies and load balancers for proper rate limiting",
+        metaDescription:
+          "Testing distributed client identification across multiple proxies and load balancers for proper rate limiting",
         articleContent: fixtures.SIMPLE_DELTA,
-        publishNow: false
+        publishNow: false,
       };
 
       // Different proxy chains but same origin IP
       const proxyVariations = [
         "203.0.113.10, 172.16.0.1",
         "203.0.113.10, 172.16.0.2, 10.0.0.1",
-        "203.0.113.10, 192.168.1.1"
+        "203.0.113.10, 192.168.1.1",
       ];
 
       let successCount = 0;
@@ -662,12 +679,12 @@ describe("Rate Limiting Integration Tests", () => {
           headers: {
             "Content-Type": "application/json",
             "Authorization": "Bearer test-token",
-            "X-Forwarded-For": forwarded
+            "X-Forwarded-For": forwarded,
           },
           body: JSON.stringify({
             ...formData,
-            articleTitle: `Proxy variation ${successCount + 1}`
-          })
+            articleTitle: `Proxy variation ${successCount + 1}`,
+          }),
         });
 
         if (response.status === 201) successCount++;

@@ -1,7 +1,7 @@
 /// <reference lib="deno.ns" />
 
 import { assertEquals, assertExists, assertRejects } from "@std/assert";
-import { describe, it, beforeEach, afterEach } from "@std/testing/bdd";
+import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
 import type { FormData } from "../../../src/types/form.ts";
 import type { WebflowCollectionItem, WebflowFieldData } from "../../../src/types/webflow.ts";
 
@@ -24,12 +24,12 @@ class MockWebflowService {
       isDraft: data.isDraft !== false,
       fieldData: data.fieldData,
     };
-    
+
     this.items.set(id, item);
     if (data.fieldData.slug) {
       this.existingSlugs.add(data.fieldData.slug);
     }
-    
+
     return item;
   }
 
@@ -71,7 +71,7 @@ class MockWebflowService {
   async getCollectionItems(params: any): Promise<any> {
     const items = Array.from(this.items.values());
     const sorted = params.sort ? items.reverse() : items;
-    
+
     return {
       items: sorted.slice(0, params.limit || 10),
       pagination: {
@@ -114,7 +114,7 @@ class MockWebflowService {
 // Mock SlugService
 class MockSlugService {
   private webflowService: MockWebflowService;
-  
+
   constructor(webflowService: MockWebflowService) {
     this.webflowService = webflowService;
   }
@@ -124,7 +124,7 @@ class MockSlugService {
     if (!exists) {
       return baseSlug;
     }
-    
+
     // Try with incrementing numbers
     for (let i = 1; i <= 10; i++) {
       const numberedSlug = `${baseSlug}-${i}`;
@@ -133,7 +133,7 @@ class MockSlugService {
         return numberedSlug;
       }
     }
-    
+
     // Fallback to timestamp
     return `${baseSlug}-${Date.now()}`;
   }
@@ -142,12 +142,12 @@ class MockSlugService {
     // Basic validation
     if (!slug || slug.length < 1 || slug.length > 100) return false;
     if (!/^[a-z0-9-]+$/.test(slug)) return false;
-    if (slug.startsWith('-') || slug.endsWith('-')) return false;
-    if (slug.includes('--')) return false;
-    
-    const reservedWords = ['admin', 'api', 'app', 'blog', 'cms', 'dashboard'];
+    if (slug.startsWith("-") || slug.endsWith("-")) return false;
+    if (slug.includes("--")) return false;
+
+    const reservedWords = ["admin", "api", "app", "blog", "cms", "dashboard"];
     if (reservedWords.includes(slug)) return false;
-    
+
     return true;
   }
 }
@@ -190,13 +190,13 @@ class MockCMSService {
 
   async createAndPublishCMSItem(formData: FormData): Promise<any> {
     const createResult = await this.createCMSItem(formData, false);
-    
+
     if (!createResult.success || !createResult.item) {
       return createResult;
     }
 
     const publishResult = await this.publishCMSItem(createResult.item.id);
-    
+
     if (!publishResult.success) {
       return {
         success: false,
@@ -263,7 +263,7 @@ class MockCMSService {
       }
 
       const { exists, itemId } = await this.webflowService.checkSlugExists(slug);
-      
+
       return {
         available: !exists,
         itemId,
@@ -339,7 +339,7 @@ class MockCMSService {
   private async mapFormDataToWebflowFields(formData: FormData): Promise<Partial<WebflowFieldData>> {
     // Mock conversion result
     const htmlContent = "<p>Test content</p>";
-    
+
     // Mock metadata
     const metadata = {
       slug: formData.slug || "test-article",
@@ -352,13 +352,13 @@ class MockCMSService {
 
     // Generate unique slug
     let slug = formData.slug || metadata.slug;
-    
+
     if (formData.slug) {
       const isValid = this.slugService.validateSlug(formData.slug);
       if (!isValid) {
         throw new Error(`Invalid slug format: ${formData.slug}`);
       }
-      
+
       const { exists } = await this.webflowService.checkSlugExists(formData.slug);
       if (exists) {
         throw new Error(`Slug already exists: ${formData.slug}`);
@@ -462,7 +462,7 @@ describe("CMSService", () => {
 
     it("should reject non-unique custom slug", async () => {
       mockWebflowService.addExistingSlug("existing-slug");
-      
+
       const formData = createFormData({ slug: "existing-slug" });
       const result = await cmsService.createCMSItem(formData);
 
@@ -474,7 +474,7 @@ describe("CMSService", () => {
       // This test is simplified since we're mocking the conversion
       const formData = createFormData();
       const result = await cmsService.createCMSItem(formData);
-      
+
       assertEquals(result.success, true);
     });
 
@@ -509,13 +509,13 @@ describe("CMSService", () => {
     it("should set published-on only when publishNow is true", async () => {
       const formDataWithoutPublish = createFormData({ publishNow: false });
       const resultWithoutPublish = await cmsService.createCMSItem(formDataWithoutPublish);
-      
+
       assertEquals(resultWithoutPublish.success, true);
       assertEquals(resultWithoutPublish.item?.fieldData["published-on"], undefined);
 
       const formDataWithPublish = createFormData({ publishNow: true });
       const resultWithPublish = await cmsService.createCMSItem(formDataWithPublish);
-      
+
       assertEquals(resultWithPublish.success, true);
       assertExists(resultWithPublish.item?.fieldData["published-on"]);
     });
@@ -646,7 +646,7 @@ describe("CMSService", () => {
 
     it("should return unavailable for existing slug", async () => {
       mockWebflowService.addExistingSlug("existing-slug");
-      
+
       const result = await cmsService.checkSlugAvailability("existing-slug");
 
       assertEquals(result.available, false);
@@ -723,7 +723,7 @@ describe("CMSService", () => {
       await assertRejects(
         () => cmsService.getCMSItem("non-existent-id"),
         Error,
-        "Item not found"
+        "Item not found",
       );
     });
   });
@@ -802,22 +802,22 @@ describe("CMSService", () => {
 
     it("should handle concurrent operations", async () => {
       const promises = [];
-      
+
       for (let i = 0; i < 5; i++) {
         const formData = createFormData({ articleTitle: `Concurrent Article ${i}` });
         promises.push(cmsService.createCMSItem(formData));
       }
 
       const results = await Promise.all(promises);
-      
+
       // All should succeed
-      results.forEach(result => {
+      results.forEach((result) => {
         assertEquals(result.success, true);
         assertExists(result.item);
       });
 
       // All should have unique IDs
-      const ids = results.map(r => r.item?.id).filter(Boolean);
+      const ids = results.map((r) => r.item?.id).filter(Boolean);
       const uniqueIds = new Set(ids);
       assertEquals(uniqueIds.size, 5);
     });

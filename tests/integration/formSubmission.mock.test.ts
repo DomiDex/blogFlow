@@ -1,11 +1,11 @@
 /// <reference lib="deno.ns" />
 
 // Setup test environment BEFORE any imports
-import { setupTestEnvironment, restoreTestEnvironment } from "../helpers/test-env.ts";
+import { restoreTestEnvironment, setupTestEnvironment } from "../helpers/test-env.ts";
 setupTestEnvironment();
 
 import { assertEquals, assertExists } from "@std/assert";
-import { describe, it, beforeEach, afterEach } from "@std/testing/bdd";
+import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
 import { setupIntegrationTest } from "../helpers/mock-app.ts";
 import { createMockFetch, createMockResponse } from "../helpers/test-utils.ts";
 import * as fixtures from "../fixtures/quill-delta.ts";
@@ -18,42 +18,42 @@ describe("Form Submission Integration Tests (Mocked)", () => {
   let authenticatedRequest: ReturnType<typeof setupIntegrationTest>["authenticatedRequest"];
   let originalFetch: typeof fetch;
   let mockResponses: Map<string, Response>;
-  
+
   beforeEach(() => {
     // Setup test app
     const testSetup = setupIntegrationTest();
     app = testSetup.app;
     request = testSetup.request;
     authenticatedRequest = testSetup.authenticatedRequest;
-    
+
     // Mock external fetch calls (Webflow API)
     originalFetch = globalThis.fetch;
     mockResponses = new Map();
     globalThis.fetch = createMockFetch(mockResponses);
-    
+
     // Setup default mock responses
     const baseUrl = "https://api.webflow.com/v2";
-    
+
     // Mock collection list response (for slug checking)
     mockResponses.set(
       `${baseUrl}/collections/test-collection-id/items?limit=100`,
-      createMockResponse(webflowFixtures.LIST_ITEMS_RESPONSE)
+      createMockResponse(webflowFixtures.LIST_ITEMS_RESPONSE),
     );
-    
+
     // Mock item creation response
     mockResponses.set(
       `${baseUrl}/collections/test-collection-id/items`,
-      createMockResponse(webflowFixtures.CREATE_ITEM_SUCCESS_RESPONSE, { status: 201 })
+      createMockResponse(webflowFixtures.CREATE_ITEM_SUCCESS_RESPONSE, { status: 201 }),
     );
-    
+
     // Mock item publish response
     const itemId = webflowFixtures.CREATE_ITEM_SUCCESS_RESPONSE.id;
     mockResponses.set(
       `${baseUrl}/collections/test-collection-id/items/${itemId}/publish`,
-      createMockResponse(webflowFixtures.PUBLISH_ITEM_SUCCESS_RESPONSE)
+      createMockResponse(webflowFixtures.PUBLISH_ITEM_SUCCESS_RESPONSE),
     );
   });
-  
+
   afterEach(() => {
     globalThis.fetch = originalFetch;
   });
@@ -63,9 +63,10 @@ describe("Form Submission Integration Tests (Mocked)", () => {
       const formData: FormData = {
         authorName: "John Doe",
         articleTitle: "My Test Article About Deno Development",
-        metaDescription: "This is a comprehensive test article about Deno development with sufficient content",
+        metaDescription:
+          "This is a comprehensive test article about Deno development with sufficient content",
         articleContent: fixtures.COMPLEX_DELTA,
-        publishNow: true
+        publishNow: true,
       };
 
       const response = await authenticatedRequest("/api/webflow-form", {
@@ -73,11 +74,11 @@ describe("Form Submission Integration Tests (Mocked)", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
 
       assertEquals(response.status, 201);
-      
+
       const result = await response.json();
       assertExists(result.itemId);
       assertEquals(result.status, "published");
@@ -93,10 +94,13 @@ describe("Form Submission Integration Tests (Mocked)", () => {
         articleContent: {
           ops: [
             { insert: "This is a minimal article with just enough content to pass validation. " },
-            { insert: "It contains multiple sentences to ensure we meet the word count requirement. " },
-            { insert: "The content is simple but valid for testing purposes." }
-          ]
-        }
+            {
+              insert:
+                "It contains multiple sentences to ensure we meet the word count requirement. ",
+            },
+            { insert: "The content is simple but valid for testing purposes." },
+          ],
+        },
       };
 
       const response = await authenticatedRequest("/api/webflow-form", {
@@ -104,11 +108,11 @@ describe("Form Submission Integration Tests (Mocked)", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
 
       assertEquals(response.status, 201);
-      
+
       const result = await response.json();
       assertExists(result.itemId);
       assertEquals(result.status, "draft"); // Default when publishNow is not specified
@@ -121,7 +125,7 @@ describe("Form Submission Integration Tests (Mocked)", () => {
         articleTitle: "Draft Article That Should Not Be Published",
         metaDescription: "This article should remain in draft status after creation",
         articleContent: fixtures.SIMPLE_DELTA,
-        publishNow: false
+        publishNow: false,
       };
 
       const response = await authenticatedRequest("/api/webflow-form", {
@@ -129,11 +133,11 @@ describe("Form Submission Integration Tests (Mocked)", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
 
       assertEquals(response.status, 201);
-      
+
       const result = await response.json();
       assertEquals(result.status, "draft");
       assertEquals(result.publishedAt, undefined);
@@ -146,7 +150,7 @@ describe("Form Submission Integration Tests (Mocked)", () => {
         authorName: "John Doe",
         // missing articleTitle
         metaDescription: "Description",
-        articleContent: fixtures.SIMPLE_DELTA
+        articleContent: fixtures.SIMPLE_DELTA,
       };
 
       const response = await authenticatedRequest("/api/webflow-form", {
@@ -154,11 +158,11 @@ describe("Form Submission Integration Tests (Mocked)", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(incompleteData)
+        body: JSON.stringify(incompleteData),
       });
 
       assertEquals(response.status, 400);
-      
+
       const error = await response.json();
       assertEquals(error.error, "Validation failed");
       assertExists(error.fields);
@@ -171,8 +175,8 @@ describe("Form Submission Integration Tests (Mocked)", () => {
         articleTitle: "Short Article",
         metaDescription: "Article with content that is too short to meet requirements",
         articleContent: {
-          ops: [{ insert: "Too short." }]
-        }
+          ops: [{ insert: "Too short." }],
+        },
       };
 
       const response = await authenticatedRequest("/api/webflow-form", {
@@ -180,11 +184,11 @@ describe("Form Submission Integration Tests (Mocked)", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(shortContentData)
+        body: JSON.stringify(shortContentData),
       });
 
       assertEquals(response.status, 400);
-      
+
       const error = await response.json();
       assertExists(error.fields);
     });
@@ -197,16 +201,16 @@ describe("Form Submission Integration Tests (Mocked)", () => {
         articleTitle: "Unauthorized Article",
         metaDescription: "This should fail due to missing auth header in the request",
         articleContent: fixtures.SIMPLE_DELTA,
-        publishNow: false
+        publishNow: false,
       };
 
       const response = await request("/api/webflow-form", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
           // Missing Authorization header
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
 
       assertEquals(response.status, 401);
@@ -218,7 +222,7 @@ describe("Form Submission Integration Tests (Mocked)", () => {
       // Mock Webflow API error
       mockResponses.set(
         "https://api.webflow.com/v2/collections/test-collection-id/items",
-        createMockResponse({ error: "Invalid request" }, { status: 400 })
+        createMockResponse({ error: "Invalid request" }, { status: 400 }),
       );
 
       const formData: FormData = {
@@ -226,7 +230,7 @@ describe("Form Submission Integration Tests (Mocked)", () => {
         articleTitle: "Article That Will Fail",
         metaDescription: "This submission will fail due to Webflow API error response",
         articleContent: fixtures.SIMPLE_DELTA,
-        publishNow: false
+        publishNow: false,
       };
 
       const response = await authenticatedRequest("/api/webflow-form", {
@@ -234,11 +238,11 @@ describe("Form Submission Integration Tests (Mocked)", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
 
       assertEquals(response.status, 502);
-      
+
       const error = await response.json();
       assertEquals(error.error, "Failed to create CMS item");
     });

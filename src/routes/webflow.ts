@@ -2,15 +2,15 @@
 import { Hono } from "@hono/hono";
 import { logger } from "@utils/logger.ts";
 import type { Variables } from "@app-types";
-import { 
+import {
   createFormValidation,
   draftFormValidation,
-  updateFormValidation,
   getValidatedData,
+  updateFormValidation,
   validateContentLength,
-  validationRateLimit
+  validationRateLimit,
 } from "@middleware/validation.ts";
-import type { FormData, DraftFormData, UpdateFormData } from "@utils/validation.ts";
+import type { DraftFormData, FormData, UpdateFormData } from "@utils/validation.ts";
 import { CMSService } from "@services/cmsService.ts";
 import { parseFormData } from "@middleware/formParser.ts";
 
@@ -23,13 +23,13 @@ const cmsService = new CMSService();
 webflowRoutes.post(
   "/webflow-form",
   validationRateLimit(),
-  parseFormData,  // Parse form data before validation
+  parseFormData, // Parse form data before validation
   createFormValidation,
-  validateContentLength({ minWords: 50, maxWords: 5000 }),
+  validateContentLength({ minWords: 20, maxWords: 10000 }), // Reduced for medical professionals
   async (c) => {
     const requestId = c.get("requestId") as string;
     const validatedData = getValidatedData<FormData>(c);
-    
+
     logger.info("Processing validated form submission", {
       requestId,
       authorName: validatedData.authorName,
@@ -42,7 +42,7 @@ webflowRoutes.post(
       // Create CMS item (as draft by default, unless publishNow is true)
       const result = await cmsService.createCMSItem(
         validatedData,
-        !validatedData.publishNow // isDraft
+        !validatedData.publishNow, // isDraft
       );
 
       if (!result.success) {
@@ -96,7 +96,7 @@ webflowRoutes.post(
           timestamp: new Date().toISOString(),
           requestId,
           status: "completed",
-        }
+        },
       });
     } catch (error) {
       logger.error("Unexpected error in form submission", {
@@ -109,19 +109,19 @@ webflowRoutes.post(
         error: error instanceof Error ? error.message : "Unknown error",
       }, 500);
     }
-  }
+  },
 );
 
 // Draft saving endpoint (more lenient validation)
 webflowRoutes.post(
   "/webflow-form/draft",
   validationRateLimit(),
-  parseFormData,  // Parse form data before validation
+  parseFormData, // Parse form data before validation
   draftFormValidation,
   (c) => {
     const requestId = c.get("requestId") as string;
     const validatedData = getValidatedData<DraftFormData>(c);
-    
+
     logger.info("Processing draft save", {
       requestId,
       hasTitle: !!validatedData.articleTitle,
@@ -133,37 +133,38 @@ webflowRoutes.post(
       success: true,
       message: "Draft saved successfully",
       data: {
-        fieldsPresent: Object.keys(validatedData).filter(key => 
+        fieldsPresent: Object.keys(validatedData).filter((key) =>
           validatedData[key as keyof DraftFormData] !== undefined
         ),
-        wordCount: validatedData.articleContent ? 
-          extractWordCount(validatedData.articleContent) : 0,
+        wordCount: validatedData.articleContent
+          ? extractWordCount(validatedData.articleContent)
+          : 0,
       },
       processing: {
         timestamp: new Date().toISOString(),
         requestId,
         type: "draft",
-      }
+      },
     });
-  }
+  },
 );
 
 // Update existing item endpoint
 webflowRoutes.put(
   "/webflow-form/:itemId",
   validationRateLimit(),
-  parseFormData,  // Parse form data before validation
+  parseFormData, // Parse form data before validation
   updateFormValidation,
-  validateContentLength({ minWords: 50, maxWords: 5000 }),
+  validateContentLength({ minWords: 20, maxWords: 10000 }), // Reduced for medical professionals
   (c) => {
     const requestId = c.get("requestId") as string;
     const itemId = c.req.param("itemId");
     const validatedData = getValidatedData<UpdateFormData>(c);
-    
+
     logger.info("Processing form update", {
       requestId,
       itemId,
-      updatedFields: Object.keys(validatedData).filter(key => 
+      updatedFields: Object.keys(validatedData).filter((key) =>
         validatedData[key as keyof UpdateFormData] !== undefined
       ),
     });
@@ -180,9 +181,9 @@ webflowRoutes.put(
         timestamp: new Date().toISOString(),
         requestId,
         type: "update",
-      }
+      },
     });
-  }
+  },
 );
 
 // Options endpoint for CORS preflight
@@ -200,24 +201,27 @@ webflowRoutes.options("/webflow-form/:itemId", (_c) => {
 });
 
 // Helper functions for content processing
-function extractTextPreview(delta: { ops?: Array<{ insert?: unknown }> }, maxLength: number = 100): string {
+function extractTextPreview(
+  delta: { ops?: Array<{ insert?: unknown }> },
+  maxLength: number = 100,
+): string {
   if (!delta.ops) return "";
-  
+
   const text = delta.ops
-    .map(op => typeof op.insert === 'string' ? op.insert : '')
-    .join('')
+    .map((op) => typeof op.insert === "string" ? op.insert : "")
+    .join("")
     .trim();
-  
+
   return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
 }
 
 function extractWordCount(delta: { ops?: Array<{ insert?: unknown }> }): number {
   if (!delta.ops) return 0;
-  
+
   const text = delta.ops
-    .map(op => typeof op.insert === 'string' ? op.insert : '')
-    .join('')
+    .map((op) => typeof op.insert === "string" ? op.insert : "")
+    .join("")
     .trim();
-  
-  return text.split(/\s+/).filter(word => word.length > 0).length;
+
+  return text.split(/\s+/).filter((word) => word.length > 0).length;
 }

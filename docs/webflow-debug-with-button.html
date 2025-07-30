@@ -1,0 +1,204 @@
+<!-- Debug Script with Visible Test Button -->
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
+
+<script>
+window.addEventListener('load', function() {
+  console.log('[BlogFlow Debug] Page loaded');
+  
+  // Add a visible test button
+  var testContainer = document.createElement('div');
+  testContainer.style.cssText = 'position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: white; padding: 20px; border: 2px solid #007bff; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+  
+  testContainer.innerHTML = `
+    <h4 style="margin: 0 0 10px 0;">BlogFlow Debug Panel</h4>
+    <button id="blogflow-test-btn" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px;">Test Submit</button>
+    <button id="blogflow-check-btn" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px;">Check Form</button>
+    <div id="blogflow-status" style="margin-top: 10px; font-size: 12px;"></div>
+  `;
+  
+  document.body.appendChild(testContainer);
+  
+  var statusDiv = document.getElementById('blogflow-status');
+  var testBtn = document.getElementById('blogflow-test-btn');
+  var checkBtn = document.getElementById('blogflow-check-btn');
+  
+  // Initialize Quill
+  var quillEditor = null;
+  var editorElement = document.getElementById('editor');
+  
+  if (editorElement && typeof Quill !== 'undefined') {
+    quillEditor = new Quill('#editor', {
+      theme: 'snow',
+      placeholder: 'Write your article content here...',
+      modules: {
+        toolbar: [
+          [{ 'header': [1, 2, 3, false] }],
+          ['bold', 'italic', 'underline'],
+          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+          ['link', 'blockquote'],
+          ['clean']
+        ]
+      }
+    });
+    statusDiv.innerHTML += '<div style="color: green;">✓ Quill editor initialized</div>';
+  } else {
+    statusDiv.innerHTML += '<div style="color: orange;">⚠ No Quill editor found</div>';
+  }
+  
+  // Check button functionality
+  checkBtn.addEventListener('click', function() {
+    statusDiv.innerHTML = '<div><strong>Checking form...</strong></div>';
+    
+    var form = document.querySelector('form');
+    if (!form) {
+      statusDiv.innerHTML += '<div style="color: red;">✗ No form found!</div>';
+      return;
+    }
+    
+    statusDiv.innerHTML += '<div style="color: green;">✓ Form found</div>';
+    
+    // List all inputs
+    var inputs = form.querySelectorAll('input, textarea, select');
+    statusDiv.innerHTML += '<div>Found ' + inputs.length + ' inputs:</div>';
+    
+    for (var i = 0; i < inputs.length; i++) {
+      var input = inputs[i];
+      if (input.name && !input.name.startsWith('_')) {
+        statusDiv.innerHTML += '<div style="margin-left: 20px; font-size: 11px;">• ' + 
+          input.name + ' = "' + (input.value || '') + '"</div>';
+      }
+    }
+    
+    // Check Quill content
+    if (quillEditor) {
+      var text = quillEditor.getText().trim();
+      var wordCount = text.split(/\s+/).filter(function(w) { return w.length > 0; }).length;
+      statusDiv.innerHTML += '<div style="color: ' + (wordCount >= 50 ? 'green' : 'orange') + 
+        ';">Quill content: ' + wordCount + ' words</div>';
+    }
+  });
+  
+  // Test submit functionality
+  testBtn.addEventListener('click', function() {
+    console.log('[BlogFlow] Test submit clicked');
+    statusDiv.innerHTML = '<div style="color: blue;">Submitting...</div>';
+    
+    var form = document.querySelector('form');
+    if (!form) {
+      statusDiv.innerHTML = '<div style="color: red;">✗ No form found!</div>';
+      return;
+    }
+    
+    try {
+      // Collect form data
+      var data = {};
+      var inputs = form.querySelectorAll('input, textarea, select');
+      
+      for (var i = 0; i < inputs.length; i++) {
+        var input = inputs[i];
+        if (input.name && !input.name.startsWith('_')) {
+          if (input.type === 'checkbox') {
+            data[input.name] = input.checked;
+          } else if (input.type !== 'radio' || input.checked) {
+            data[input.name] = input.value;
+          }
+        }
+      }
+      
+      // Add Quill content
+      if (quillEditor) {
+        var content = quillEditor.getContents();
+        var text = quillEditor.getText().trim();
+        
+        if (text.length < 50) {
+          // Add dummy content for testing
+          quillEditor.setText('This is test content to meet the minimum word requirement. ' +
+            'The quick brown fox jumps over the lazy dog. ' +
+            'This sentence is added to ensure we have enough words for the test. ' +
+            'Testing the BlogFlow integration with Webflow forms. ' +
+            'Adding more content to reach the fifty word minimum requirement.');
+          content = quillEditor.getContents();
+        }
+        
+        data.articleContent = content;
+      } else {
+        // Fallback content
+        data.articleContent = {
+          ops: [{ insert: 'Test article content. '.repeat(20) }]
+        };
+      }
+      
+      // Process arrays
+      if (data.tags && typeof data.tags === 'string') {
+        data.tags = data.tags.split(',').map(function(t) { return t.trim(); }).filter(Boolean);
+      }
+      
+      if (data.categories && typeof data.categories === 'string') {
+        data.categories = data.categories.split(',').map(function(c) { return c.trim(); }).filter(Boolean);
+      }
+      
+      // Ensure required fields
+      data.authorName = data.authorName || 'Test Author';
+      data.authorEmail = data.authorEmail || data.email || 'test@example.com';
+      data.articleTitle = data.articleTitle || 'Test Article - ' + new Date().toISOString();
+      data.metaDescription = data.metaDescription || 'Test description';
+      
+      // Convert checkbox
+      if (data.publishNow === 'on') data.publishNow = true;
+      
+      console.log('[BlogFlow] Submitting data:', data);
+      statusDiv.innerHTML += '<div>Sending to API...</div>';
+      
+      // Make request
+      fetch('https://dominiquede-blogflow-62.deno.dev/api/webflow-form', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+      })
+      .then(function(response) {
+        return response.json().then(function(result) {
+          return { status: response.status, data: result };
+        });
+      })
+      .then(function(result) {
+        console.log('[BlogFlow] Response:', result);
+        
+        if (result.status === 200 && result.data.success) {
+          statusDiv.innerHTML = '<div style="color: green; font-weight: bold;">✓ Success!</div>';
+          statusDiv.innerHTML += '<div>Article ID: ' + (result.data.data.itemId || 'N/A') + '</div>';
+          
+          // Show in form area too
+          form.style.display = 'none';
+          var successDiv = document.createElement('div');
+          successDiv.className = 'w-form-done';
+          successDiv.style.display = 'block';
+          successDiv.innerHTML = '<div>Test submission successful! Article ID: ' + 
+            (result.data.data.itemId || 'N/A') + '</div>';
+          form.parentNode.insertBefore(successDiv, form.nextSibling);
+          
+        } else {
+          statusDiv.innerHTML = '<div style="color: red;">✗ Error: ' + 
+            (result.data.message || 'Unknown error') + '</div>';
+          if (result.data.fields) {
+            statusDiv.innerHTML += '<div style="font-size: 11px;">Fields: ' + 
+              JSON.stringify(result.data.fields) + '</div>';
+          }
+        }
+      })
+      .catch(function(error) {
+        console.error('[BlogFlow] Error:', error);
+        statusDiv.innerHTML = '<div style="color: red;">✗ Network error: ' + error.message + '</div>';
+      });
+      
+    } catch (error) {
+      console.error('[BlogFlow] Error:', error);
+      statusDiv.innerHTML = '<div style="color: red;">✗ Error: ' + error.message + '</div>';
+    }
+  });
+  
+  statusDiv.innerHTML += '<div style="color: green;">✓ Debug panel ready</div>';
+});
+</script>

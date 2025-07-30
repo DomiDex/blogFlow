@@ -1,24 +1,24 @@
 import { assertEquals, assertInstanceOf } from "@std/testing/asserts";
 import {
-  BaseError,
-  ValidationError,
-  WebflowError,
   AuthenticationError,
   AuthorizationError,
-  NotFoundError,
-  ConflictError,
-  RateLimitError,
-  ExternalServiceError,
-  TimeoutError,
+  BaseError,
   BusinessLogicError,
+  ConflictError,
   ContentProcessingError,
+  createValidationError,
+  createWebflowError,
+  ExternalServiceError,
   isBaseError,
   isOperationalError,
+  isRateLimitError,
   isValidationError,
   isWebflowError,
-  isRateLimitError,
-  createWebflowError,
-  createValidationError,
+  NotFoundError,
+  RateLimitError,
+  TimeoutError,
+  ValidationError,
+  WebflowError,
 } from "@/utils/errors.ts";
 
 // Since BaseError is abstract, we'll create a concrete implementation for testing
@@ -30,7 +30,7 @@ class TestError extends BaseError {
 
 Deno.test("BaseError - creates error with default properties", () => {
   const error = new TestError("Test error");
-  
+
   assertEquals(error.message, "Test error");
   assertEquals(error.name, "TestError");
   assertEquals(error.code, "TEST_ERROR");
@@ -42,7 +42,7 @@ Deno.test("BaseError - creates error with default properties", () => {
 
 Deno.test("BaseError - creates error with custom properties", () => {
   const error = new TestError("Custom error", "CUSTOM_CODE", 400);
-  
+
   assertEquals(error.message, "Custom error");
   assertEquals(error.code, "CUSTOM_CODE");
   assertEquals(error.statusCode, 400);
@@ -51,13 +51,13 @@ Deno.test("BaseError - creates error with custom properties", () => {
 Deno.test("BaseError - includes context", () => {
   const context = { userId: 123, action: "create" };
   const error = new BusinessLogicError("Business error", "BIZ_ERROR", context);
-  
+
   assertEquals(error.context, context);
 });
 
 Deno.test("ValidationError - creates validation error", () => {
   const error = new ValidationError("Invalid data", "email", "invalid@");
-  
+
   assertEquals(error.message, "Invalid data");
   assertEquals(error.name, "ValidationError");
   assertEquals(error.statusCode, 400);
@@ -73,9 +73,9 @@ Deno.test("WebflowError - creates API error", () => {
     "API request failed",
     429,
     "rate_limit_exceeded",
-    "Rate limit exceeded"
+    "Rate limit exceeded",
   );
-  
+
   assertEquals(error.message, "API request failed");
   assertEquals(error.name, "WebflowError");
   assertEquals(error.statusCode, 429);
@@ -88,7 +88,7 @@ Deno.test("WebflowError - creates API error", () => {
 
 Deno.test("AuthenticationError - creates auth error", () => {
   const error = new AuthenticationError();
-  
+
   assertEquals(error.message, "Authentication required");
   assertEquals(error.name, "AuthenticationError");
   assertEquals(error.statusCode, 401);
@@ -97,7 +97,7 @@ Deno.test("AuthenticationError - creates auth error", () => {
 
 Deno.test("AuthorizationError - creates authorization error", () => {
   const error = new AuthorizationError("Admin access required");
-  
+
   assertEquals(error.message, "Admin access required");
   assertEquals(error.name, "AuthorizationError");
   assertEquals(error.statusCode, 403);
@@ -109,17 +109,17 @@ Deno.test("NotFoundError - creates not found error", () => {
   assertEquals(error1.message, "User with ID 123 not found");
   assertEquals(error1.resource, "User");
   assertEquals(error1.statusCode, 404);
-  
+
   const error2 = new NotFoundError("Article");
   assertEquals(error2.message, "Article not found");
-  
+
   const error3 = new NotFoundError();
   assertEquals(error3.message, "Resource not found");
 });
 
 Deno.test("ConflictError - creates conflict error", () => {
   const error = new ConflictError("Slug already exists", "article-slug");
-  
+
   assertEquals(error.message, "Slug already exists");
   assertEquals(error.conflictingResource, "article-slug");
   assertEquals(error.statusCode, 409);
@@ -133,9 +133,9 @@ Deno.test("RateLimitError - creates rate limit error", () => {
     60,
     100,
     0,
-    reset
+    reset,
   );
-  
+
   assertEquals(error.message, "Too many requests");
   assertEquals(error.retryAfter, 60);
   assertEquals(error.limit, 100);
@@ -147,24 +147,24 @@ Deno.test("RateLimitError - creates rate limit error", () => {
 
 Deno.test("ExternalServiceError - creates external service error", () => {
   const error = new ExternalServiceError("webflow", "Service unavailable");
-  
+
   assertEquals(error.message, "Service unavailable");
   assertEquals(error.service, "webflow");
   assertEquals(error.statusCode, 502);
   assertEquals(error.code, "EXTERNAL_SERVICE_ERROR");
-  
+
   const error2 = new ExternalServiceError("github");
   assertEquals(error2.message, "External service github is unavailable");
 });
 
 Deno.test("TimeoutError - creates timeout error", () => {
   const error = new TimeoutError(30000, "API request");
-  
+
   assertEquals(error.message, "Operation 'API request' timed out after 30000ms");
   assertEquals(error.timeout, 30000);
   assertEquals(error.statusCode, 504);
   assertEquals(error.code, "TIMEOUT");
-  
+
   const error2 = new TimeoutError(5000);
   assertEquals(error2.message, "Request timed out after 5000ms");
 });
@@ -172,9 +172,9 @@ Deno.test("TimeoutError - creates timeout error", () => {
 Deno.test("BusinessLogicError - creates business logic error", () => {
   const error = new BusinessLogicError(
     "Invalid article state",
-    "INVALID_STATE"
+    "INVALID_STATE",
   );
-  
+
   assertEquals(error.message, "Invalid article state");
   assertEquals(error.code, "INVALID_STATE");
   assertEquals(error.statusCode, 400);
@@ -183,9 +183,9 @@ Deno.test("BusinessLogicError - creates business logic error", () => {
 Deno.test("ContentProcessingError - creates content processing error", () => {
   const error = new ContentProcessingError(
     "Failed to convert Delta",
-    "delta_conversion"
+    "delta_conversion",
   );
-  
+
   assertEquals(error.message, "Failed to convert Delta");
   assertEquals(error.stage, "delta_conversion");
   assertEquals(error.statusCode, 422);
@@ -195,7 +195,7 @@ Deno.test("ContentProcessingError - creates content processing error", () => {
 Deno.test("Type guards - isBaseError", () => {
   const baseError = new ValidationError("Test");
   const normalError = new Error("Test");
-  
+
   assertEquals(isBaseError(baseError), true);
   assertEquals(isBaseError(normalError), false);
   assertEquals(isBaseError(null), false);
@@ -205,7 +205,7 @@ Deno.test("Type guards - isBaseError", () => {
 Deno.test("Type guards - isOperationalError", () => {
   const operationalError = new ValidationError("Test");
   const normalError = new Error("Test");
-  
+
   assertEquals(isOperationalError(operationalError), true);
   assertEquals(isOperationalError(normalError), false);
 });
@@ -213,7 +213,7 @@ Deno.test("Type guards - isOperationalError", () => {
 Deno.test("Type guards - isValidationError", () => {
   const validationError = new ValidationError("Test");
   const otherError = new WebflowError("Test", 400);
-  
+
   assertEquals(isValidationError(validationError), true);
   assertEquals(isValidationError(otherError), false);
 });
@@ -221,7 +221,7 @@ Deno.test("Type guards - isValidationError", () => {
 Deno.test("Type guards - isWebflowError", () => {
   const webflowError = new WebflowError("Test", 400);
   const otherError = new ValidationError("Test");
-  
+
   assertEquals(isWebflowError(webflowError), true);
   assertEquals(isWebflowError(otherError), false);
 });
@@ -229,7 +229,7 @@ Deno.test("Type guards - isWebflowError", () => {
 Deno.test("Type guards - isRateLimitError", () => {
   const rateLimitError = new RateLimitError();
   const otherError = new WebflowError("Test", 429);
-  
+
   assertEquals(isRateLimitError(rateLimitError), true);
   assertEquals(isRateLimitError(otherError), false);
 });
@@ -243,12 +243,12 @@ Deno.test("createWebflowError - creates error from response", () => {
       code: "invalid_collection",
     },
   });
-  
+
   assertEquals(error1.message, "Invalid collection ID");
   assertEquals(error1.statusCode, 400);
   assertEquals(error1.webflowCode, "invalid_collection");
   assertEquals(error1.webflowMessage, "Invalid collection ID");
-  
+
   // Test with err field
   const error2 = createWebflowError({
     status: 500,
@@ -256,22 +256,22 @@ Deno.test("createWebflowError - creates error from response", () => {
       err: "Internal server error",
     },
   });
-  
+
   assertEquals(error2.message, "Internal server error");
-  
+
   // Test with no body
   const error3 = createWebflowError({
     status: 404,
     statusText: "Not Found",
   });
-  
+
   assertEquals(error3.message, "Not Found");
-  
+
   // Test with empty body
   const error4 = createWebflowError({
     status: 503,
   });
-  
+
   assertEquals(error4.message, "Webflow API error");
 });
 
@@ -280,9 +280,9 @@ Deno.test("createValidationError - creates error from array", () => {
     { path: ["user", "email"], message: "Invalid email" },
     { path: ["user", "password"], message: "Too short" },
   ];
-  
+
   const error = createValidationError(errors);
-  
+
   assertEquals(error.message, "Invalid email");
   assertEquals(error.field, "user.email");
   assertEquals(error.context?.allErrors, errors);
@@ -293,9 +293,9 @@ Deno.test("createValidationError - creates error from object", () => {
     email: "Invalid email format",
     password: "Password too short",
   };
-  
+
   const error = createValidationError(errors);
-  
+
   assertEquals(error.message, "Invalid email format");
   assertEquals(error.field, "email");
   assertEquals(error.context?.allErrors, errors);
@@ -304,7 +304,7 @@ Deno.test("createValidationError - creates error from object", () => {
 Deno.test("createValidationError - handles empty errors", () => {
   const error1 = createValidationError([]);
   assertEquals(error1.message, "Validation failed");
-  
+
   const error2 = createValidationError({});
   assertEquals(error2.message, "Validation failed");
 });
@@ -318,7 +318,7 @@ Deno.test("Error stack traces are preserved", () => {
 Deno.test("BaseError - toJSON serializes correctly", () => {
   const error = new ValidationError("Test error", "email");
   const json = error.toJSON();
-  
+
   assertEquals(json.name, "ValidationError");
   assertEquals(json.message, "Test error");
   assertEquals(json.code, "VALIDATION_ERROR");
@@ -332,7 +332,7 @@ Deno.test("BaseError - toJSON includes context when present", () => {
   const context = { userId: 123 };
   const error = new BusinessLogicError("Error", "CODE", context);
   const json = error.toJSON();
-  
+
   assertEquals(json.context, context);
 });
 
@@ -340,7 +340,7 @@ Deno.test("Error timestamp is set correctly", () => {
   const before = new Date();
   const error = new ValidationError("Test");
   const after = new Date();
-  
+
   assertEquals(error.timestamp >= before, true);
   assertEquals(error.timestamp <= after, true);
 });

@@ -1,9 +1,7 @@
 /// <reference lib="deno.ns" />
 import { getTextContent } from "@utils/sanitizer.ts";
 import { calculateReadingTime as calculateAdvancedReadingTime } from "@utils/readingTime.ts";
-import {
-  generateUniqueSlug as generateUniqueSlugUtil,
-} from "@utils/slugGenerator.ts";
+import { generateUniqueSlug as generateUniqueSlugUtil } from "@utils/slugGenerator.ts";
 import { extractIntroText as extractIntroTextUtil } from "@utils/introTextExtractor.ts";
 import { logger } from "@utils/logger.ts";
 import { ContentProcessingError } from "@utils/errors.ts";

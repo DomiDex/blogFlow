@@ -147,12 +147,14 @@ const testData1 = new FormDataBuilder().build();
 ## Available Scenarios
 
 ### Valid Articles
+
 - `minimal` - Minimum valid data
 - `complete` - All fields populated
 - `draft` - Unpublished article
 - `richFormatting` - Complex formatting
 
 ### Edge Cases
+
 - `maxLength` - Maximum field lengths
 - `specialChars` - Unicode and special characters
 - `unicode` - Emoji and international text
@@ -160,6 +162,7 @@ const testData1 = new FormDataBuilder().build();
 - `reservedWords` - Slug generation edge cases
 
 ### Invalid Data
+
 - `missingAuthor` - Missing required field
 - `shortContent` - Below minimum word count
 - `emptyContent` - No content
@@ -167,11 +170,13 @@ const testData1 = new FormDataBuilder().build();
 - `shortTitle` - Title too short
 
 ### Stress Testing
+
 - `rapidFire` - Multiple quick submissions
 - `concurrent` - Parallel requests
 - `largeBatch` - High volume testing
 
 ### Security Testing
+
 - `xssAttempt` - XSS injection attempts
 - `sqlInjection` - SQL injection attempts
 - `htmlInjection` - HTML injection attempts
@@ -228,18 +233,18 @@ describe("SlugService", () => {
 ```typescript
 describe("Form Submission", () => {
   const { app } = setupIntegrationTest();
-  
+
   it("should submit valid form", async () => {
     const formData = new FormDataBuilder()
       .withAuthor("Test Author")
       .published()
       .build();
-      
+
     const response = await app.request("/api/webflow-form", {
       method: "POST",
       body: JSON.stringify(formData),
     });
-    
+
     expect(response.status).toBe(201);
   });
 });
@@ -251,13 +256,13 @@ describe("Form Submission", () => {
 describe("Performance", () => {
   it("should handle large batches", async () => {
     const articles = TestScenarios.stressTest.largeBatch;
-    
+
     const start = performance.now();
     for (const article of articles) {
       await processArticle(article);
     }
     const duration = performance.now() - start;
-    
+
     expect(duration).toBeLessThan(5000);
   });
 });
@@ -282,7 +287,7 @@ Add to `tests/fixtures/scenarios.ts`:
 ```typescript
 export const TestScenarios = {
   // ... existing scenarios
-  
+
   customScenario: {
     myTest: new FormDataBuilder()
       .withTitle("Custom Test")

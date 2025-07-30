@@ -1,14 +1,14 @@
 import { assertEquals } from "@std/testing/asserts";
 import {
-  generateMetadata,
-  calculateWordCount,
+  type ArticleMetadata,
   calculateReadingTime,
+  calculateWordCount,
   extractIntroText,
+  generateMetadata,
   generateUniqueSlug,
+  type MetadataOptions,
   updateMetadata,
   validateMetadata,
-  type ArticleMetadata,
-  type MetadataOptions,
 } from "@/services/metadataGenerator.ts";
 
 // Test HTML content
@@ -21,7 +21,11 @@ const sampleHtml = `
 
 const longHtml = `
   <article>
-    ${Array(50).fill('<p>This is a paragraph with approximately twenty words to help test the reading time calculation algorithm accurately for longer articles.</p>').join('\n')}
+    ${
+  Array(50).fill(
+    "<p>This is a paragraph with approximately twenty words to help test the reading time calculation algorithm accurately for longer articles.</p>",
+  ).join("\n")
+}
   </article>
 `;
 
@@ -63,8 +67,9 @@ Deno.test("calculateReadingTime - large word counts", () => {
 Deno.test("extractIntroText - basic extraction", () => {
   const text = "This is a short intro text.";
   assertEquals(extractIntroText(text), text);
-  
-  const longText = "This is a much longer piece of text that will definitely exceed the maximum length for intro text and should be truncated with ellipsis at the end.";
+
+  const longText =
+    "This is a much longer piece of text that will definitely exceed the maximum length for intro text and should be truncated with ellipsis at the end.";
   const result = extractIntroText(longText, 50);
   assertEquals(result.endsWith("..."), true);
   assertEquals(result.length <= 53, true); // Should be around 50 chars + "..."
@@ -72,7 +77,8 @@ Deno.test("extractIntroText - basic extraction", () => {
 });
 
 Deno.test("extractIntroText - word boundary handling", () => {
-  const text = "This is a test article about implementing a metadata generator service for blog posts. It should cut at word boundaries.";
+  const text =
+    "This is a test article about implementing a metadata generator service for blog posts. It should cut at word boundaries.";
   const result = extractIntroText(text, 50);
   // Should cut at a word boundary, not in the middle of a word
   assertEquals(result.endsWith("..."), true);
@@ -116,7 +122,8 @@ Deno.test("generateUniqueSlug - reserved words", () => {
 });
 
 Deno.test("generateUniqueSlug - long titles", () => {
-  const longTitle = "This is an extremely long title that definitely exceeds the maximum slug length and should be truncated appropriately without breaking words";
+  const longTitle =
+    "This is an extremely long title that definitely exceeds the maximum slug length and should be truncated appropriately without breaking words";
   const slug = generateUniqueSlug(longTitle);
   assertEquals(slug.length <= 100, true);
   assertEquals(slug.endsWith("-"), false); // No trailing dash

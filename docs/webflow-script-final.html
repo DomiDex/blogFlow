@@ -1,0 +1,274 @@
+<!-- Quill JS -->
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
+
+<!-- Form Handler Script - Add before </body> -->
+<script>
+(function() {
+  'use strict';
+  
+  console.log('[BlogFlow] Script loading...');
+  
+  // Configuration
+  const API_ENDPOINT = 'https://dominiquede-blogflow-62.deno.dev/api/webflow-form';
+  const MIN_WORD_COUNT = 50;
+  
+  // Completely prevent Webflow's form handling
+  function disableWebflowForms() {
+    // Override Webflow's form handler
+    if (window.Webflow) {
+      window.Webflow.push(function() {
+        console.log('[BlogFlow] Disabling Webflow form handlers');
+        
+        // Find all forms
+        const forms = document.querySelectorAll('form');
+        forms.forEach(form => {
+          // Remove Webflow attributes
+          form.removeAttribute('data-name');
+          form.removeAttribute('data-redirect');
+          form.removeAttribute('data-ajax');
+          
+          // Set our attributes
+          form.setAttribute('data-custom-handler', 'true');
+          
+          // Remove action if it points to Webflow
+          if (form.action && form.action.includes('webflow.com')) {
+            form.removeAttribute('action');
+          }
+        });
+      });
+    }
+    
+    // Also disable on DOM ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', disableWebflowForms);
+    }
+  }
+  
+  // Initialize form handler
+  function initializeFormHandler() {
+    console.log('[BlogFlow] Initializing form handler');
+    
+    // Find the form
+    const form = document.querySelector('form[data-name="Blog Submission Form"]') || 
+                 document.querySelector('form');
+    
+    if (!form) {
+      console.error('[BlogFlow] No form found');
+      return;
+    }
+    
+    console.log('[BlogFlow] Form found:', form);
+    
+    // Remove any existing submit handlers by cloning the form
+    const newForm = form.cloneNode(true);
+    form.parentNode.replaceChild(newForm, form);
+    
+    // Work with the new form
+    setupForm(newForm);
+  }
+  
+  function setupForm(form) {
+    // Prevent default action
+    form.action = '#';
+    form.method = 'POST';
+    
+    // Initialize Quill
+    let quill = null;
+    const editorEl = document.getElementById('editor');
+    
+    if (editorEl && typeof Quill !== 'undefined') {
+      quill = new Quill('#editor', {
+        theme: 'snow',
+        placeholder: 'Write your article content here...',
+        modules: {
+          toolbar: [
+            [{ 'header': [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline'],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            ['link', 'blockquote'],
+            ['clean']
+          ]
+        }
+      });
+      console.log('[BlogFlow] Quill initialized');
+    }
+    
+    // Add submit handler with capturing phase
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      
+      console.log('[BlogFlow] Form submit intercepted');
+      handleFormSubmit(form, quill);
+      
+      return false;
+    }, true); // Use capturing phase
+    
+    // Also override onsubmit
+    form.onsubmit = function(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      return false;
+    };
+    
+    console.log('[BlogFlow] Form handler attached');
+  }
+  
+  async function handleFormSubmit(form, quill) {
+    console.log('[BlogFlow] Processing form submission');
+    
+    const submitBtn = form.querySelector('[type="submit"]');
+    const originalText = submitBtn ? submitBtn.value : 'Submit';
+    
+    try {
+      // Disable submit
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.value = 'Processing...';
+      }
+      
+      // Collect form data
+      const formData = new FormData(form);
+      const data = {};
+      
+      // Convert to object
+      for (const [key, value] of formData.entries()) {
+        if (key.startsWith('_') || key === 'submit') continue;
+        data[key] = value;
+      }
+      
+      // Add Quill content
+      if (quill) {
+        const delta = quill.getContents();
+        const text = quill.getText().trim();
+        const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+        
+        if (wordCount < MIN_WORD_COUNT) {
+          throw new Error(`Article must be at least ${MIN_WORD_COUNT} words (currently ${wordCount})`);
+        }
+        
+        data.articleContent = delta;
+      } else if (!data.articleContent) {
+        throw new Error('Article content is required');
+      }
+      
+      // Process arrays
+      if (data.tags && typeof data.tags === 'string') {
+        data.tags = data.tags.split(',').map(t => t.trim()).filter(Boolean);
+      }
+      
+      if (data.categories && typeof data.categories === 'string') {
+        data.categories = data.categories.split(',').map(c => c.trim()).filter(Boolean);
+      }
+      
+      // Handle checkbox
+      data.publishNow = data.publishNow === 'on' || data.publishNow === 'true';
+      
+      // Ensure required fields
+      data.authorEmail = data.authorEmail || data.email || '';
+      data.metaDescription = data.metaDescription || data.description || '';
+      
+      console.log('[BlogFlow] Sending data:', data);
+      
+      // Make API call
+      const response = await fetch(API_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+      });
+      
+      const result = await response.json();
+      console.log('[BlogFlow] Response:', result);
+      
+      if (response.ok && result.success) {
+        showSuccess(form, result);
+        form.reset();
+        if (quill) quill.setText('');
+      } else {
+        throw new Error(result.message || 'Submission failed');
+      }
+      
+    } catch (error) {
+      console.error('[BlogFlow] Error:', error);
+      showError(form, error.message);
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.value = originalText;
+      }
+    }
+  }
+  
+  function showSuccess(form, result) {
+    // Hide form
+    form.style.display = 'none';
+    
+    // Remove any existing messages
+    const existingSuccess = form.parentNode.querySelector('.w-form-done');
+    if (existingSuccess) existingSuccess.remove();
+    
+    // Create success message
+    const successDiv = document.createElement('div');
+    successDiv.className = 'w-form-done';
+    successDiv.style.display = 'block';
+    successDiv.innerHTML = `
+      <div>
+        <strong>Thank you! Your article has been submitted successfully.</strong><br>
+        ${result.data && result.data.itemId ? `Article ID: ${result.data.itemId}` : ''}
+      </div>
+    `;
+    
+    form.parentNode.insertBefore(successDiv, form.nextSibling);
+  }
+  
+  function showError(form, message) {
+    // Remove any existing errors
+    const existingError = form.parentNode.querySelector('.w-form-fail');
+    if (existingError) existingError.remove();
+    
+    // Create error message
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'w-form-fail';
+    errorDiv.style.display = 'block';
+    errorDiv.innerHTML = `
+      <div>
+        <strong>Error:</strong> ${message}
+      </div>
+    `;
+    
+    form.parentNode.insertBefore(errorDiv, form.nextSibling);
+    
+    // Auto-hide after 10 seconds
+    setTimeout(() => {
+      errorDiv.style.display = 'none';
+    }, 10000);
+  }
+  
+  // Start initialization process
+  disableWebflowForms();
+  
+  // Initialize on multiple events to ensure we catch the form
+  if (window.Webflow) {
+    window.Webflow.push(initializeFormHandler);
+  }
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeFormHandler);
+  } else {
+    // DOM already loaded
+    setTimeout(initializeFormHandler, 100);
+  }
+  
+  // Also try on window load as final attempt
+  window.addEventListener('load', function() {
+    setTimeout(initializeFormHandler, 500);
+  });
+  
+})();
+</script>

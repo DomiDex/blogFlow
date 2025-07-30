@@ -1,17 +1,17 @@
 /// <reference lib="deno.ns" />
 import type { Context, Next } from "@hono/hono";
 import { logger } from "@utils/logger.ts";
-import { 
-  WebflowError, 
-  WebflowAuthError, 
-  WebflowValidationError, 
-  WebflowRateLimitError, 
-  WebflowNotFoundError,
-  WebflowServerError,
-  WebflowNetworkError,
-  isWebflowError,
+import {
+  getErrorRecoveryStrategy,
   getUserFriendlyMessage,
-  getErrorRecoveryStrategy
+  isWebflowError,
+  WebflowAuthError,
+  WebflowError,
+  WebflowNetworkError,
+  WebflowNotFoundError,
+  WebflowRateLimitError,
+  WebflowServerError,
+  WebflowValidationError,
 } from "@utils/webflowErrors.ts";
 
 export interface WebflowErrorResponse {
@@ -35,18 +35,18 @@ export function webflowErrorHandler() {
       await next();
     } catch (error) {
       const requestId = c.get("requestId") as string;
-      
+
       // Handle Webflow-specific errors
       if (isWebflowError(error)) {
         return handleWebflowError(c, error, requestId);
       }
-      
+
       // Handle other errors
       logger.error("Non-Webflow error in webflow handler", {
         requestId,
         error: error instanceof Error ? error : new Error(String(error)),
       });
-      
+
       // Re-throw for the main error handler
       throw error;
     }
@@ -94,14 +94,23 @@ function handleWebflowError(c: Context, error: WebflowError, requestId?: string)
 
   // Generic Webflow error
   // Map to appropriate status codes
-  const statusCode = error.httpStatus === 400 ? 400 :
-                     error.httpStatus === 401 ? 401 :
-                     error.httpStatus === 403 ? 403 :
-                     error.httpStatus === 404 ? 404 :
-                     error.httpStatus === 429 ? 429 :
-                     error.httpStatus === 500 ? 500 :
-                     error.httpStatus === 502 ? 502 :
-                     error.httpStatus === 503 ? 503 : 500;
+  const statusCode = error.httpStatus === 400
+    ? 400
+    : error.httpStatus === 401
+    ? 401
+    : error.httpStatus === 403
+    ? 403
+    : error.httpStatus === 404
+    ? 404
+    : error.httpStatus === 429
+    ? 429
+    : error.httpStatus === 500
+    ? 500
+    : error.httpStatus === 502
+    ? 502
+    : error.httpStatus === 503
+    ? 503
+    : 500;
   return c.json(errorResponse, statusCode);
 }
 
@@ -109,13 +118,13 @@ function handleWebflowError(c: Context, error: WebflowError, requestId?: string)
  * Handle validation errors with field-specific details
  */
 function handleValidationError(
-  c: Context, 
-  error: WebflowValidationError, 
-  response: WebflowErrorResponse
+  c: Context,
+  error: WebflowValidationError,
+  response: WebflowErrorResponse,
 ): Response {
   // Add field-specific validation errors
   const fieldErrors: Record<string, string[]> = {};
-  
+
   for (const fieldError of error.fieldErrors) {
     if (!fieldErrors[fieldError.field]) {
       fieldErrors[fieldError.field] = [];
@@ -146,9 +155,9 @@ function handleValidationError(
  * Handle rate limiting with retry information
  */
 function handleRateLimitError(
-  c: Context, 
-  error: WebflowRateLimitError, 
-  response: WebflowErrorResponse
+  c: Context,
+  error: WebflowRateLimitError,
+  response: WebflowErrorResponse,
 ): Response {
   const rateLimitResponse = {
     ...response,
@@ -182,16 +191,16 @@ function handleRateLimitError(
  * Handle authentication/authorization errors
  */
 function handleAuthError(
-  c: Context, 
-  error: WebflowAuthError, 
-  response: WebflowErrorResponse
+  c: Context,
+  error: WebflowAuthError,
+  response: WebflowErrorResponse,
 ): Response {
   const authResponse = {
     ...response,
     error: error.httpStatus === 403 ? "Forbidden" : "Unauthorized",
     message: getUserFriendlyMessage(error),
     details: {
-      suggestion: error.code === "missing_scopes" 
+      suggestion: error.code === "missing_scopes"
         ? "Please regenerate your API token with the required scopes"
         : "Please check your API credentials and try again",
     },
@@ -210,9 +219,9 @@ function handleAuthError(
  * Handle not found errors
  */
 function handleNotFoundError(
-  c: Context, 
-  error: WebflowNotFoundError, 
-  response: WebflowErrorResponse
+  c: Context,
+  error: WebflowNotFoundError,
+  response: WebflowErrorResponse,
 ): Response {
   const notFoundResponse = {
     ...response,
@@ -230,12 +239,12 @@ function handleNotFoundError(
  * Handle server errors with retry information
  */
 function handleServerError(
-  c: Context, 
-  error: WebflowServerError, 
-  response: WebflowErrorResponse
+  c: Context,
+  error: WebflowServerError,
+  response: WebflowErrorResponse,
 ): Response {
   const strategy = getErrorRecoveryStrategy(error);
-  
+
   const serverResponse = {
     ...response,
     error: "Server Error",
@@ -258,20 +267,22 @@ function handleServerError(
     retryDelay: strategy.retryDelay,
   });
 
-  return c.json(serverResponse, error.httpStatus === 502 ? 502 : 
-                                error.httpStatus === 503 ? 503 : 500);
+  return c.json(
+    serverResponse,
+    error.httpStatus === 502 ? 502 : error.httpStatus === 503 ? 503 : 500,
+  );
 }
 
 /**
  * Handle network errors
  */
 function handleNetworkError(
-  c: Context, 
-  error: WebflowNetworkError, 
-  response: WebflowErrorResponse
+  c: Context,
+  error: WebflowNetworkError,
+  response: WebflowErrorResponse,
 ): Response {
   const strategy = getErrorRecoveryStrategy(error);
-  
+
   const networkResponse = {
     ...response,
     error: "Network Error",

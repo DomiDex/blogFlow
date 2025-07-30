@@ -1,0 +1,655 @@
+<!-- BlogFlow Script with Toast Notifications - Fixed Quill Editor -->
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
+
+<!-- Toast Notification Styles + Quill Fix -->
+<style>
+/* IMPORTANT: Fix for Quill editor in Webflow */
+#editor {
+  background: white !important;
+  min-height: 300px !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+.ql-container {
+  font-size: 16px !important;
+  font-family: inherit !important;
+}
+
+.ql-editor {
+  min-height: 250px !important;
+  padding: 15px !important;
+  background: white !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* Ensure Quill toolbar is clickable */
+.ql-toolbar {
+  position: relative !important;
+  z-index: 2 !important;
+  background: white !important;
+  border-top-left-radius: 4px !important;
+  border-top-right-radius: 4px !important;
+}
+
+/* Fix for Webflow's default styles that might interfere */
+.w-input, .w-select, .ql-editor {
+  pointer-events: auto !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+/* Toast Styles */
+.blogflow-toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.blogflow-toast {
+  background: white;
+  border-radius: 8px;
+  padding: 16px 24px;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 300px;
+  max-width: 500px;
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateX(100%);
+  transition: all 0.3s ease;
+}
+
+.blogflow-toast.show {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.blogflow-toast.success {
+  border-left: 4px solid #10b981;
+}
+
+.blogflow-toast.error {
+  border-left: 4px solid #ef4444;
+}
+
+.blogflow-toast.warning {
+  border-left: 4px solid #f59e0b;
+}
+
+.blogflow-toast.info {
+  border-left: 4px solid #3b82f6;
+}
+
+.blogflow-toast-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.blogflow-toast.success .blogflow-toast-icon { color: #10b981; }
+.blogflow-toast.error .blogflow-toast-icon { color: #ef4444; }
+.blogflow-toast.warning .blogflow-toast-icon { color: #f59e0b; }
+.blogflow-toast.info .blogflow-toast-icon { color: #3b82f6; }
+
+.blogflow-toast-content {
+  flex: 1;
+}
+
+.blogflow-toast-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #1f2937;
+}
+
+.blogflow-toast-message {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.blogflow-toast-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.blogflow-toast-close:hover {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+/* Loading spinner */
+.blogflow-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 50%;
+  border-top-color: #3b82f6;
+  animation: blogflow-spin 0.8s linear infinite;
+  margin-left: 8px;
+}
+
+@keyframes blogflow-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Field validation styles */
+.blogflow-field-error {
+  border-color: #ef4444 !important;
+  background-color: #fef2f2 !important;
+}
+
+.blogflow-field-success {
+  border-color: #10b981 !important;
+  background-color: #f0fdf4 !important;
+}
+
+/* Word count display */
+.blogflow-word-count {
+  text-align: right;
+  font-size: 14px;
+  color: #6b7280;
+  margin-top: 8px;
+}
+</style>
+
+<script>
+// Toast notification system
+var BlogFlowToast = (function() {
+  var container = null;
+  
+  function init() {
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'blogflow-toast-container';
+      document.body.appendChild(container);
+    }
+  }
+  
+  function show(type, title, message, duration) {
+    init();
+    
+    var toast = document.createElement('div');
+    toast.className = 'blogflow-toast ' + type;
+    
+    var icons = {
+      success: '✓',
+      error: '✕',
+      warning: '⚠',
+      info: 'ℹ'
+    };
+    
+    toast.innerHTML = 
+      '<span class="blogflow-toast-icon">' + icons[type] + '</span>' +
+      '<div class="blogflow-toast-content">' +
+        '<div class="blogflow-toast-title">' + title + '</div>' +
+        (message ? '<div class="blogflow-toast-message">' + message + '</div>' : '') +
+      '</div>' +
+      '<button class="blogflow-toast-close" onclick="this.parentElement.remove()">✕</button>';
+    
+    container.appendChild(toast);
+    
+    // Trigger animation
+    setTimeout(function() {
+      toast.classList.add('show');
+    }, 10);
+    
+    // Auto remove
+    if (duration !== 0) {
+      setTimeout(function() {
+        toast.classList.remove('show');
+        setTimeout(function() {
+          if (toast.parentNode) {
+            toast.remove();
+          }
+        }, 300);
+      }, duration || 5000);
+    }
+    
+    return toast;
+  }
+  
+  return {
+    success: function(title, message, duration) {
+      return show('success', title, message, duration);
+    },
+    error: function(title, message, duration) {
+      return show('error', title, message, duration);
+    },
+    warning: function(title, message, duration) {
+      return show('warning', title, message, duration);
+    },
+    info: function(title, message, duration) {
+      return show('info', title, message, duration);
+    }
+  };
+})();
+
+// Main BlogFlow script
+window.addEventListener('load', function() {
+  console.log('[BlogFlow] Initializing with toast notifications...');
+  
+  BlogFlowToast.info('Initializing', 'Setting up blog form...', 2000);
+  
+  // Give extra time for Webflow to finish
+  setTimeout(function() {
+    initBlogFlow();
+  }, 1500);
+});
+
+function initBlogFlow() {
+  var form = document.querySelector('form');
+  if (!form) {
+    BlogFlowToast.error('Form Not Found', 'No form element found on the page');
+    return;
+  }
+  
+  // Initialize Quill with explicit configuration
+  var quillEditor = null;
+  var editorElement = document.getElementById('editor');
+  
+  if (editorElement && typeof Quill !== 'undefined') {
+    try {
+      // Clear any existing content
+      editorElement.innerHTML = '';
+      
+      // Initialize Quill
+      quillEditor = new Quill('#editor', {
+        theme: 'snow',
+        placeholder: 'Write your article content here...',
+        modules: {
+          toolbar: [
+            [{ 'header': [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline'],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            ['link', 'blockquote'],
+            ['clean']
+          ]
+        }
+      });
+      
+      // Force enable the editor
+      quillEditor.enable();
+      
+      // Make sure editor is focusable
+      var qlEditor = editorElement.querySelector('.ql-editor');
+      if (qlEditor) {
+        qlEditor.setAttribute('contenteditable', 'true');
+        qlEditor.style.userSelect = 'text';
+        qlEditor.style.webkitUserSelect = 'text';
+        qlEditor.style.mozUserSelect = 'text';
+      }
+      
+      // Add word count display
+      var wordCountDiv = document.createElement('div');
+      wordCountDiv.className = 'blogflow-word-count';
+      wordCountDiv.id = 'word-count';
+      wordCountDiv.textContent = '0 words';
+      editorElement.parentNode.insertBefore(wordCountDiv, editorElement.nextSibling);
+      
+      // Add word count listener
+      quillEditor.on('text-change', function() {
+        var text = quillEditor.getText().trim();
+        var wordCount = text.split(/\s+/).filter(function(word) {
+          return word.length > 0;
+        }).length;
+        
+        wordCountDiv.textContent = wordCount + ' words';
+        wordCountDiv.style.color = wordCount >= 50 ? '#10b981' : '#ef4444';
+      });
+      
+      console.log('[BlogFlow] Quill editor initialized successfully');
+      
+      // Test that editor is working
+      setTimeout(function() {
+        if (quillEditor.isEnabled()) {
+          BlogFlowToast.success('Editor Ready', 'You can now write your article', 3000);
+        } else {
+          BlogFlowToast.warning('Editor Issue', 'Click in the editor area to activate', 4000);
+        }
+      }, 500);
+      
+    } catch (error) {
+      console.error('[BlogFlow] Quill initialization error:', error);
+      BlogFlowToast.error('Editor Error', 'Failed to initialize the editor', 5000);
+    }
+  }
+  
+  // Find submit button
+  var submitBtn = form.querySelector('[type="submit"]') || 
+                  form.querySelector('input[value*="Submit"]') ||
+                  form.querySelector('button');
+  
+  // Add real-time validation
+  setupFieldValidation(form);
+  
+  // Override form submission
+  form.onsubmit = function(e) {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
+    handleFormSubmit(form, quillEditor, submitBtn);
+    return false;
+  };
+  
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    return false;
+  }, true);
+  
+  BlogFlowToast.success('Ready', 'Blog form initialized successfully', 3000);
+}
+
+function setupFieldValidation(form) {
+  // Author name validation
+  var authorNameField = form.querySelector('[name="authorName"]');
+  if (authorNameField) {
+    authorNameField.addEventListener('blur', function() {
+      if (this.value.trim().length < 2) {
+        this.classList.add('blogflow-field-error');
+        this.classList.remove('blogflow-field-success');
+        BlogFlowToast.warning('Validation', 'Author name is too short', 3000);
+      } else {
+        this.classList.add('blogflow-field-success');
+        this.classList.remove('blogflow-field-error');
+      }
+    });
+  }
+  
+  // Article title validation
+  var titleField = form.querySelector('[name="articleTitle"]');
+  if (titleField) {
+    titleField.addEventListener('blur', function() {
+      var value = this.value.trim();
+      
+      // Check for invalid characters
+      var validPattern = /^[a-zA-Z0-9\s\-_:!?\.,'"()&]+$/;
+      if (!validPattern.test(value)) {
+        this.classList.add('blogflow-field-error');
+        this.classList.remove('blogflow-field-success');
+        BlogFlowToast.error('Invalid Characters', 'Title contains special characters. Use only letters, numbers, and basic punctuation.', 5000);
+      } else if (value.length < 10) {
+        this.classList.add('blogflow-field-error');
+        this.classList.remove('blogflow-field-success');
+        BlogFlowToast.warning('Too Short', 'Title must be at least 10 characters', 3000);
+      } else {
+        this.classList.add('blogflow-field-success');
+        this.classList.remove('blogflow-field-error');
+      }
+    });
+  }
+  
+  // Meta description validation
+  var metaField = form.querySelector('[name="metaDescription"]');
+  if (metaField) {
+    metaField.addEventListener('input', function() {
+      var length = this.value.trim().length;
+      
+      if (length > 0 && length < 50) {
+        BlogFlowToast.info('Meta Description', 'Need ' + (50 - length) + ' more characters', 2000);
+      }
+    });
+    
+    metaField.addEventListener('blur', function() {
+      if (this.value.trim().length < 50) {
+        this.classList.add('blogflow-field-error');
+        this.classList.remove('blogflow-field-success');
+        BlogFlowToast.warning('Too Short', 'Meta description needs at least 50 characters for SEO', 4000);
+      } else {
+        this.classList.add('blogflow-field-success');
+        this.classList.remove('blogflow-field-error');
+      }
+    });
+  }
+}
+
+function handleFormSubmit(form, quillEditor, submitBtn) {
+  console.log('[BlogFlow] Processing submission...');
+  
+  var originalText = submitBtn.value || submitBtn.textContent;
+  submitBtn.disabled = true;
+  if (submitBtn.value) {
+    submitBtn.value = 'Processing...';
+  } else {
+    submitBtn.innerHTML = 'Processing<span class="blogflow-spinner"></span>';
+  }
+  
+  BlogFlowToast.info('Submitting', 'Validating your article...', 0);
+  
+  try {
+    // Collect form data
+    var formData = {};
+    var inputs = form.querySelectorAll('input, textarea, select');
+    
+    for (var i = 0; i < inputs.length; i++) {
+      var input = inputs[i];
+      if (input.name && !input.name.startsWith('_')) {
+        if (input.type === 'checkbox') {
+          formData[input.name] = input.checked;
+        } else if (input.type === 'radio') {
+          if (input.checked) {
+            formData[input.name] = input.value;
+          }
+        } else {
+          formData[input.name] = input.value;
+        }
+      }
+    }
+    
+    // Validate before sending
+    var errors = [];
+    
+    if (!formData.authorName || formData.authorName.trim().length < 2) {
+      errors.push('Author name is required');
+    }
+    
+    if (!formData.articleTitle || formData.articleTitle.trim().length < 10) {
+      errors.push('Article title must be at least 10 characters');
+    }
+    
+    // Check title for invalid characters
+    if (formData.articleTitle) {
+      var validPattern = /^[a-zA-Z0-9\s\-_:!?\.,'"()&]+$/;
+      if (!validPattern.test(formData.articleTitle)) {
+        errors.push('Title contains invalid characters');
+      }
+    }
+    
+    if (!formData.metaDescription || formData.metaDescription.trim().length < 50) {
+      errors.push('Meta description must be at least 50 characters');
+    }
+    
+    // Add Quill content
+    if (quillEditor) {
+      var delta = quillEditor.getContents();
+      var text = quillEditor.getText().trim();
+      var wordCount = text.split(/\s+/).filter(function(word) {
+        return word.length > 0;
+      }).length;
+      
+      if (wordCount < 50) {
+        errors.push('Article must be at least 50 words (currently ' + wordCount + ')');
+      } else {
+        formData.articleContent = delta;
+      }
+    } else {
+      errors.push('Article content is required');
+    }
+    
+    // Show validation errors
+    if (errors.length > 0) {
+      // Close loading toast
+      document.querySelectorAll('.blogflow-toast').forEach(function(toast) {
+        toast.remove();
+      });
+      
+      // Show errors
+      for (var j = 0; j < errors.length; j++) {
+        (function(error, index) {
+          setTimeout(function() {
+            BlogFlowToast.error('Validation Error', error, 5000);
+          }, index * 200);
+        })(errors[j], j);
+      }
+      
+      throw new Error('Please fix validation errors');
+    }
+    
+    // Process arrays
+    if (formData.tags && typeof formData.tags === 'string') {
+      formData.tags = formData.tags.split(',').map(function(tag) {
+        return tag.trim();
+      }).filter(Boolean);
+    }
+    
+    if (formData.categories && typeof formData.categories === 'string') {
+      formData.categories = formData.categories.split(',').map(function(cat) {
+        return cat.trim();
+      }).filter(Boolean);
+    }
+    
+    // Handle checkbox
+    if (formData.publishNow === 'on') {
+      formData.publishNow = true;
+    }
+    
+    // Auto-generate email
+    formData.authorEmail = formData.authorEmail || 'noreply@' + window.location.hostname;
+    
+    console.log('[BlogFlow] Sending data:', formData);
+    
+    // Make API request
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', 'https://dominiquede-blogflow-62.deno.dev/api/webflow-form', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    
+    xhr.onload = function() {
+      // Close loading toast
+      document.querySelectorAll('.blogflow-toast').forEach(function(toast) {
+        toast.remove();
+      });
+      
+      try {
+        var response = JSON.parse(xhr.responseText);
+        console.log('[BlogFlow] Response:', response);
+        
+        if (xhr.status === 200 && response.success) {
+          BlogFlowToast.success('Success!', 'Article published successfully', 0);
+          
+          showSuccess(form, response);
+          form.reset();
+          if (quillEditor) {
+            quillEditor.setText('');
+          }
+          
+          // Remove field validation styles
+          form.querySelectorAll('.blogflow-field-error, .blogflow-field-success').forEach(function(field) {
+            field.classList.remove('blogflow-field-error', 'blogflow-field-success');
+          });
+        } else {
+          // Handle API validation errors
+          if (response.fields) {
+            for (var field in response.fields) {
+              if (response.fields.hasOwnProperty(field)) {
+                var fieldErrors = response.fields[field];
+                if (Array.isArray(fieldErrors)) {
+                  fieldErrors.forEach(function(error) {
+                    BlogFlowToast.error(field, error, 6000);
+                  });
+                }
+              }
+            }
+          } else {
+            BlogFlowToast.error('Submission Failed', response.message || 'Unknown error', 5000);
+          }
+        }
+      } catch (e) {
+        BlogFlowToast.error('Server Error', 'Invalid response from server', 5000);
+      }
+      
+      submitBtn.disabled = false;
+      if (submitBtn.value) {
+        submitBtn.value = originalText;
+      } else {
+        submitBtn.textContent = originalText;
+      }
+    };
+    
+    xhr.onerror = function() {
+      document.querySelectorAll('.blogflow-toast').forEach(function(toast) {
+        toast.remove();
+      });
+      
+      BlogFlowToast.error('Network Error', 'Please check your connection and try again', 5000);
+      submitBtn.disabled = false;
+      if (submitBtn.value) {
+        submitBtn.value = originalText;
+      } else {
+        submitBtn.textContent = originalText;
+      }
+    };
+    
+    xhr.send(JSON.stringify(formData));
+    
+  } catch (error) {
+    console.error('[BlogFlow] Error:', error);
+    submitBtn.disabled = false;
+    if (submitBtn.value) {
+      submitBtn.value = originalText;
+    } else {
+      submitBtn.textContent = originalText;
+    }
+  }
+}
+
+function showSuccess(form, response) {
+  form.style.display = 'none';
+  
+  var successDiv = document.createElement('div');
+  successDiv.className = 'w-form-done';
+  successDiv.style.display = 'block';
+  successDiv.innerHTML = 
+    '<div style="text-align: center; padding: 40px;">' +
+      '<div style="font-size: 48px; color: #10b981; margin-bottom: 20px;">✓</div>' +
+      '<h2 style="margin-bottom: 10px;">Article Published!</h2>' +
+      '<p>Your article has been submitted successfully.</p>' +
+      (response.data && response.data.itemId ? '<p style="color: #6b7280; margin-top: 10px;">Article ID: ' + response.data.itemId + '</p>' : '') +
+    '</div>';
+  
+  form.parentNode.insertBefore(successDiv, form.nextSibling);
+}
+
+function showError(form, message) {
+  var errorDiv = form.parentNode.querySelector('.w-form-fail');
+  
+  if (!errorDiv) {
+    errorDiv = document.createElement('div');
+    errorDiv.className = 'w-form-fail';
+    form.parentNode.insertBefore(errorDiv, form.nextSibling);
+  }
+  
+  errorDiv.style.display = 'block';
+  errorDiv.innerHTML = '<div><strong>Error:</strong> ' + message + '</div>';
+}
+
+console.log('[BlogFlow] Script loaded with toast notifications and Quill fix');
+</script>
