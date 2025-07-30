@@ -24,7 +24,7 @@ healthRoutes.get("/health", async (c) => {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
-    
+
     const response = await fetch("https://api.webflow.com/v2/sites", {
       method: "HEAD",
       headers: {
@@ -32,13 +32,13 @@ healthRoutes.get("/health", async (c) => {
       },
       signal: controller.signal,
     });
-    
+
     clearTimeout(timeoutId);
     webflowStatus = response.ok ? "connected" : "error";
   } catch (error) {
     webflowStatus = "disconnected";
-    logger.warn("Webflow API health check failed", { 
-      message: error instanceof Error ? error.message : String(error) 
+    logger.warn("Webflow API health check failed", {
+      message: error instanceof Error ? error.message : String(error),
     });
   }
 
@@ -83,7 +83,7 @@ healthRoutes.get("/", (c) => {
       metrics: "/health/metrics",
       ready: "/health/ready",
     },
-    documentation: "https://github.com/your-org/webflow-middleware",
+    documentation: "Made By DomiDex: https://github.com/DomiDex/blogFlow",
     deployment: {
       platform: "deno-deploy",
       build: Deno.env.get("GIT_COMMIT") || "development",
@@ -103,7 +103,7 @@ healthRoutes.get("/health/ready", (c) => {
     memory: Deno.memoryUsage().heapUsed < (512 * 1024 * 1024), // Less than 512MB
   };
 
-  const allChecksPass = Object.values(checks).every(check => check === true);
+  const allChecksPass = Object.values(checks).every((check) => check === true);
 
   if (!allChecksPass) {
     return c.json({
@@ -124,7 +124,7 @@ healthRoutes.get("/health/ready", (c) => {
 healthRoutes.get("/health/metrics", (c) => {
   const memoryUsage = Deno.memoryUsage();
   const rateLimitStats = getRateLimitStats();
-  
+
   // Prometheus-style metrics
   const metrics = [
     `# HELP process_heap_bytes Process heap size in bytes`,

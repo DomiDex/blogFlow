@@ -12,6 +12,7 @@ import {
 } from "@middleware/validation.ts";
 import type { FormData, DraftFormData, UpdateFormData } from "@utils/validation.ts";
 import { CMSService } from "@services/cmsService.ts";
+import { parseFormData } from "@middleware/formParser.ts";
 
 export const webflowRoutes = new Hono<{ Variables: Variables }>();
 
@@ -22,6 +23,7 @@ const cmsService = new CMSService();
 webflowRoutes.post(
   "/webflow-form",
   validationRateLimit(),
+  parseFormData,  // Parse form data before validation
   createFormValidation,
   validateContentLength({ minWords: 50, maxWords: 5000 }),
   async (c) => {
@@ -114,6 +116,7 @@ webflowRoutes.post(
 webflowRoutes.post(
   "/webflow-form/draft",
   validationRateLimit(),
+  parseFormData,  // Parse form data before validation
   draftFormValidation,
   (c) => {
     const requestId = c.get("requestId") as string;
@@ -149,6 +152,7 @@ webflowRoutes.post(
 webflowRoutes.put(
   "/webflow-form/:itemId",
   validationRateLimit(),
+  parseFormData,  // Parse form data before validation
   updateFormValidation,
   validateContentLength({ minWords: 50, maxWords: 5000 }),
   (c) => {
