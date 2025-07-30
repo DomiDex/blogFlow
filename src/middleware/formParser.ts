@@ -76,7 +76,7 @@ export async function parseFormData(c: Context, next: Next) {
     });
 
     // Override the request json() method to return our parsed data
-    c.req.json = async () => jsonData;
+    c.req.json = () => Promise.resolve(jsonData as any);
     
     await next();
   } catch (error) {
