@@ -76,6 +76,7 @@ export async function parseFormData(c: Context, next: Next) {
     });
 
     // Override the request json() method to return our parsed data
+    // deno-lint-ignore no-explicit-any
     c.req.json = () => Promise.resolve(jsonData as any);
     
     await next();
